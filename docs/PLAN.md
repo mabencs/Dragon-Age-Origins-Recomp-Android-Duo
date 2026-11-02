@@ -3370,7 +3370,7 @@ that leaves the owner's devices, so release builds get their own key (11.3).
       .dazip byte-identical to Windows' tar.exe's. README, THIRD_PARTY.md, About this app
       (the licence, DAORecomp at github.com/96dot/Dragon-Age-Origins-Recomp as the base,
       the source's address from gradle.properties' `warden.sourceUrl`, empty until the
-      public repository exists) and the licences page (the app's own GPL text first,
+      public repository existed; https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo since 2026-11-02) and the licences page (the app's own GPL text first,
       libarchive in UnRAR's place) say so. **The key:** RSA 4096, 30 years, at
       `~/.android/dao-release.jks`, its passwords in `~/.android/dao-release.properties`
       (outside the repository; app/build.gradle.kts reads it, `-Pwarden.releaseSigning`

@@ -534,10 +534,12 @@ still makes `libdaogame.so` with the NDK and `python tools/push_gamecode.py` put
 device. A release is `./gradlew :app:assembleRelease` then `python tools/release.py`,
 which must pass before an APK is published (`docs/TESTING.md`). Next, in order:
 
-1. **The owner's:** publish the repository on GitHub (a fresh history is best - the old
-   one holds private details; PLAN 12.7's note), set `warden.sourceUrl` in
-   `gradle.properties` to its URL, build the release from that commit and attach it to the
-   repository's Releases page.
+1. **Published (2026-11-02):** the repository is https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo - a fresh
+   history, one commit to start; `origin` is GitHub and only `main` is pushed there
+   (`remote.origin.push`). The old history stays on the owner's private server and in the
+   local branch `archive-main`; never push it to GitHub. The 0.1.0-alpha APK is on its
+   Releases page (tag `v0.1.0-alpha`). A later release: bump `warden.version`, build from a
+   committed tree, `python tools/release.py`, a new GitHub release with the APK.
 2. **What the alpha's players report.** Debugging Mode's .zip holds the logs, the saves
    and how the runs ended; `docs/TESTING.md` says how to read them.
 3. **The open bugs:** BUG-042 and BUG-047 (rare; a reproduction first), BUG-058.

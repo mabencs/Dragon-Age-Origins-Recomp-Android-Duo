@@ -159,7 +159,7 @@ No computer is needed: everything happens on the device.
 
 ## Installing the app
 
-1. Download the APK from this repository's **Releases** page, on the device or onto it.
+1. Download the APK from this repository's [**Releases**](https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo/releases) page, on the device or onto it.
 2. Open it, allowing installs from where you opened it when Android asks, and install.
 
 **Updating:** install the new APK over the old one. Never uninstall the app to update:
@@ -489,7 +489,7 @@ are welcome.
 
    The log says the same at each start: its `MODS LOADED` lines name every mod and add-in
    in use, or say `MODS LOADED: none`.
-4. Attach the .zip to a bug report on this repository's issue tracker, with what you were
+4. Attach the .zip to a bug report on this repository's [issue tracker](https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo/issues), with what you were
    doing. It holds only what is listed above: the device's model and Android version in
    the log, the names of your mods, and in the saves your characters' names.
 

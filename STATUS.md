@@ -10,7 +10,7 @@ starts by re-deriving context that was already paid for.
 | **Version** | **0.1.0-alpha, "Open Alpha"** - the first public release: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **The owner's:** publish the repository on GitHub (a fresh history - the old one holds private details), set `warden.sourceUrl` in `gradle.properties` to its URL, build the release from that commit (`tools/release.py`) and attach it to Releases. Then what the alpha's players report. `RESUMING.md` §5. |
+| **Next action** | **Published** (2026-11-02): https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo, the 0.1.0-alpha APK on its Releases page. Next: what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -1865,6 +1865,20 @@ Then continue from **Next action** at the top of this file.
 ## 9. Session log
 
 Newest first. One short entry per session: what changed, what's next.
+
+### 2026-11-02 (session 41, the end) - published on GitHub
+
+- **The repository is public:** https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo,
+  a fresh history (the owner pushed the single first commit, made from the tree as it was
+  at the private server's last commit, byte-identical). Not a fork of DAORecomp: the
+  project uses it as a pinned dependency and shares none of its history, so it stands on
+  its own and credits it. This working folder now follows it: `origin` is GitHub, pushing
+  only `main`; the old history is the local branch `archive-main` and the private server's,
+  an archive. Commits are authored with the owner's GitHub no-reply address.
+- `warden.sourceUrl` is the repository's address (About this app shows it); the README links
+  its Releases page and issue tracker.
+- **The 0.1.0-alpha release** built from that commit, checked by `tools/release.py`, and
+  published as the pre-release `v0.1.0-alpha` with the APK.
 
 ### 2026-11-02 (session 41, later still) - BUG-104: a test route left in the owner's app
 
