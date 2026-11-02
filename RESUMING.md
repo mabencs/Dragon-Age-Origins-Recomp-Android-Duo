@@ -11,8 +11,8 @@ the session log). This file is how to get a new machine to the point where you c
 continue, what the device holds, how the daily loop works, what comes next, and the
 things that cost an hour each when nobody said them.
 
-Brought up to date on 2026-11-02, at version 0.1.0-alpha ("Open Alpha"), when the
-repository went public: §0-§3 and §5 describe the project as it is now; §4 and §6
+Brought up to date on 2026-11-02, at version 0.1.1-alpha ("Open Alpha"; 0.1.0-alpha, when the
+repository went public, for most of this file): §0-§3 and §5 describe the project as it is now; §4 and §6
 onwards are the loop and the lore, unchanged in substance since session 32.
 
 ---
@@ -545,7 +545,7 @@ which must pass before an APK is published (`docs/TESTING.md`). Next, in order:
 3. **The open bugs:** BUG-042 and BUG-047 (rare; a reproduction first), BUG-058.
 4. **The owner's deferred items,** when asked: 9.15 (LS1), 9.9.
 
-**Session 42 (2026-11-02):** the deck's Quests and Codex fold, its long texts are read while open, and the Items tab equips and uses (PLAN 8.11, 8.12; BUG-105 to BUG-107), and a conversation's 4 s freeze with frame generation is gone (BUG-108). Left there: a trap's Use.
+**Session 42 (2026-11-02):** the deck's Quests and Codex fold, its long texts are read while open, and the Items tab equips and uses (PLAN 8.11, 8.12; BUG-105 to BUG-107), and a conversation's 4 s freeze with frame generation is gone (BUG-108). Left there: a trap's Use. Released as 0.1.1-alpha (`CHANGELOG.md`).
 
 Below are the earlier resume notes, newest first, kept for their detail.
 

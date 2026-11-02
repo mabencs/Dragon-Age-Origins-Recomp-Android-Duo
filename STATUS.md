@@ -7,7 +7,7 @@ starts by re-deriving context that was already paid for.
 | | |
 |---|---|
 | **Last updated** | 2026-11-02 (session 42) |
-| **Version** | **0.1.0-alpha, "Open Alpha"** - the first public release: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
+| **Version** | **0.1.1-alpha, "Open Alpha"** (`CHANGELOG.md`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
 | **Next action** | **Published** (2026-11-02): https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo, the 0.1.0-alpha APK on its Releases page. Next: what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
@@ -1866,8 +1866,10 @@ Then continue from **Next action** at the top of this file.
 
 Newest first. One short entry per session: what changed, what's next.
 
-### 2026-11-02 (session 42) - the deck: folding, codex text, item details and actions, BUG-105 to 108
+### 2026-11-02 (session 42) - the deck: folding, codex text, item details and actions, BUG-105 to 109
 
+- **0.1.1-alpha** released with all of this (`CHANGELOG.md`, the tag `v0.1.1-alpha`). The game-code
+  ABI is unchanged, so players keep the game code they made.
 - **Quests** as the journal has them: Current and Completed pages, the game's groups by
   priority, each group and quest unfolding on a tap (PLAN 8.11, BUG-107). **Codex** the
   same, and its entries readable once unlocked, read in the game or not (BUG-105; run 603
