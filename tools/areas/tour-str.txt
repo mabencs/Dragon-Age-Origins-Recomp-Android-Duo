@@ -1,0 +1,9 @@
+# PLAN 10.11, session 40: Witch Hunt (DAO_PRC_STR) - the campaign opens on character
+# creation (tools/areas/chargen_quick.sh), then Flemeth's hut (str100ar, profiled on
+# arrival as str-hut-exterior). zz_str_debug: 1 Area Jump -> 1 The Elven Ruins,
+# 2 Scrying Fight Setup (Mirror Room), 3 Cadash Thaig, 4 The Dragonbone Wastes, 5 Back;
+# 2 Add Party Member; 3 Activate all map pins; 4 Test import conditions; 5 Exit Debug.
+# str-elven-ruins (done)|!zz_str_debug|A A
+# str-mirror-room (inside the ruins: no load)|!zz_str_debug|A D A
+str-cadash-thaig|!zz_str_debug|A D D A
+str-dragonbone-wastes|!zz_str_debug|A D D D A

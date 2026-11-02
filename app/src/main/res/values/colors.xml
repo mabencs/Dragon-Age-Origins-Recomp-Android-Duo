@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The game's own palette: parchment-on-iron with brass highlights. Used by the
+         launcher icon and the pre-Vulkan window background, so the first frame does
+         not flash white before the renderer takes over. -->
+    <color name="warden_iron">#FF14110F</color>
+    <color name="warden_brass">#FFC9A227</color>
+    <color name="warden_blood">#FF6E1414</color>
+</resources>

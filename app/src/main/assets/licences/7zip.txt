@@ -1,0 +1,10 @@
+7-Zip's C decoder (LZMA SDK)
+
+Licence: public domain
+In this app: unpacking .7z mods
+Version: tag 26.05
+Source: https://github.com/ip7z/7zip
+
+------------------------------------------------------------
+The files built (7z*, Bra*, Bcj2, Delta, Lzma*, Ppmd7*, CpuArch) say, each:
+"Igor Pavlov : Public domain".

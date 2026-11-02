@@ -1,0 +1,51 @@
+# PLAN 10.11: the second pass over the main campaign's areas the first pass could not
+# reach (session 40) - label|script|presses, as tour.txt. Run after the main list with
+# the game on the probe route (bash tools/areas/tour.sh tools/areas/tour-redo.txt).
+#
+# The prelude's signal tower and tower top are plot-gated: from anywhere but the night
+# camp, "Start at the signal tower" answers "The red shirts are required for this
+# portion of the plot, you will need to start in the King's camp night and use the
+# debugger again from there" (1. Start in the night version of the King's camp, 2. Start
+# over). So the night camp first, and the two towers right after it - tour.sh reboots
+# only on a failed jump, so the three stay in one game.
+pre-night-camp-again|zz_pre_debug|A D D A
+pre-signal-tower|zz_pre_debug|A D D D A
+pre-tower-top|zz_pre_debug|A D D D D A
+# The prelude's (MORE) page (read in session 40): 1 Flemeth's hut (after the signal
+# tower), 2 the end of the Prelude, 3 its very end with Morrigan, 4 the Tower of Ishal's
+# level 3, 5 the King's camp with the opening cutscene, 6 (Start over.)
+pre-flemeth-hut|zz_pre_debug|A D D D D D A A
+pre-ishal-level-3|zz_pre_debug|A D D D D D A D D D A
+# The origins' menus (read in session 40). Dwarf Commoner: plot points (1 Beginning,
+# 2 Finding Oskias, 3 Returning to Beraht, 4 Entering the Proving, 5 Taken Prisoner,
+# 6 Exit) - "Beginning" closed the menu without a load in the first pass, so an extra A
+# for a Continue. Human Noble: 1 Starting the plot -> 1 Without the opening cutscene;
+# 2 Before the siege; 3 During the siege. City Elf: 1 To a place -> 1 your home, 2 the
+# alienage, 3 the exterior of the palace (the Arl of Denerim's estate, BUG-085's), 4 the
+# palace. Dalish Elf: 1 To an area -> 1 the ruins, 2 the forest clearing, 3 the Dalish camp.
+bdc-beginning|zz_bdc_debug|A A A
+bdc-proving|zz_bdc_debug|D D D A A A
+bhn-start|zz_bhn_debug|A A A A
+bhn-siege|zz_bhn_debug|D D A A A
+bec-home|zz_bec_debug|A A A
+bec-alienage|zz_bec_debug|A D A A
+bec-palace-exterior|zz_bec_debug|A D D A A
+bec-palace|zz_bec_debug|A D D D A A
+bed-ruins|zz_bed_debug|A A A
+bed-forest-clearing|zz_bed_debug|A D A A
+bed-dalish-camp|zz_bed_debug|A D D A A
+# The Deep Roads (zz_orz_debug's menu is six items: 4 Area Jump -> 5 Deep Roads ->
+# "Which?" -> "Where in?"; a "." is a 2 s pause where a sub-list opens). Ortan Thaig's
+# "Where in?": 1 Shale Thaig (closed the menu without a load), 2 Deeproad Outskirts (Dace).
+orz-ortan-thaig|zz_orz_debug|D D D A D D D D A . D A . D A A
+# The Dead Trenches' and the Anvil's "Where in?" pages are unread (the reads' presses
+# were lost in the Area Jump list after a pause there): the first item of each, with an
+# extra A.
+orz-dead-trenches|zz_orz_debug|D D D A D D D D A . D D A . A A
+orz-anvil-of-the-void|zz_orz_debug|D D D A D D D D A . D D D A . A A
+# The epilogue: 1 (Simple Setup) - Start Epilogue.
+epi-start|zz_epi_debug|A A A
+# Haven (zz_mtn_debug: 1 Farewell, 2 Jump me between locations, 3 Plot Debug; the jumps:
+# 1 Farewell, 2 To the Cultist's Demon Summon Circle) - closed without a load in the
+# first pass, so an extra A.
+mtn-summon-circle|zz_mtn_debug|D A . D A A

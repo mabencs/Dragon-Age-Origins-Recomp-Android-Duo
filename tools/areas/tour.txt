@@ -1,0 +1,68 @@
+# PLAN 10.11: the areas' tour's list - label|script|presses, one jump a line (tour.sh).
+# Lines starting with # are skipped: the areas done stay here, commented out, so the tour
+# goes on from the first live line:
+#   bash tools/route.sh probe; bash tools/boot_capture.sh <run> 60   (the probe route)
+#   bash tools/areas/tour.sh tools/areas/tour.txt
+# The presses: A selects, D is a d-pad down; a module's list is pages of three with
+# "more..." as item 4 (docs/AREAS.md, docs/TESTING.md). Results: docs/AREAS.md.
+#
+# done 2026-10-31 (session 38): the Circle tower
+# cir-tower1|zz_cir_debug|A A
+# cir-tower2|zz_cir_debug|A D A
+# cir-tower3|zz_cir_debug|A D D A
+# cir-tower4|zz_cir_debug|A D D D A A
+# cir-harrowing|zz_cir_debug|A D D D A D A
+# cir-lake-calenhad|zz_cir_debug|A D D D A D D A
+# cir-fade-raw|zz_cir_debug|A D D D A D D D A A
+# cir-fade-weisshaupt|zz_cir_debug|A D D D A D D D A D A
+# cir-fade-burning-tower|zz_cir_debug|A D D D A D D D A D D A
+# cir-fade-mage-asunder|zz_cir_debug|A D D D A D D D A D D D A A
+# cir-fade-templar-nightmare|zz_cir_debug|A D D D A D D D A D D D A D D A
+# cir-fade-sloth|zz_cir_debug|A D D D A D D D A D D D A D D D A D D D A
+# done 2026-11-01 00:46-01:40 (session 38): Lothering, the Dalish camp, Denerim, Orzammar, the Urn
+# lot-outdoors|zz_lot_debug|A A
+# lot-chantry|zz_lot_debug|A D A
+# lot-danes-refuge|zz_lot_debug|A D D A
+# ntb-dalish-camp|zz_ntb_debug|D A A
+# den-market|zz_den_debug|D A D D A
+# den-alienage|zz_den_debug|D A D D D A
+# den-fort-drakon|zz_den_debug|D A D D D D A
+# den-howe-estate|zz_den_debug|D A D A A
+# orz-entrance|zz_orz_debug|D D D A A A
+# orz-commons|zz_orz_debug|D D D A D A A
+# orz-nobles-quarter|zz_orz_debug|D D D A D D A A
+# orz-slums|zz_orz_debug|D D D A D D D A A
+# urn-cultist-village|zz_urn_debug|A A
+# urn-ruined-temple|zz_urn_debug|A D A
+# urn-wyrmling-lair|zz_urn_debug|A D D A
+#
+# left (the mountain top's probe was cut short by the computer's crash: again)
+# urn-mountain-top|zz_urn_debug|A D D D A
+# urn-gauntlet|zz_urn_debug|A D D D D A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): mtn-summon-circle|zz_mtn_debug|D A D A
+# pre-korcari-wilds|zz_pre_debug|A D A
+# pre-night-camp|zz_pre_debug|A D D A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): pre-signal-tower|zz_pre_debug|A D D D A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): pre-tower-top|zz_pre_debug|A D D D D A
+# camp-party-camp|zz_camp_debug|D D D A
+# bdn-intro|zz_bdn_debug|A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): bdc-beginning|zz_bdc_debug|A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): bhn-start|zz_bhn_debug|A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): bec-start|zz_bec_debug|A
+# skipped in session 40's first pass (a gate or a sub-list; tour-redo.txt): bed-start|zz_bed_debug|A
+# the sub-lists found in the night - one more press than was tried (the forest's sub-list
+# is unread: bash tools/areas/menu_read.sh zz_ntb_debug ntb-forest "D A D A" first)
+# ntb-forest|zz_ntb_debug|D A D A A
+# ntb-ruins-upper|zz_ntb_debug|D A D D A A
+# ntb-ruins-undead|zz_ntb_debug|D A D D A D A
+# ntb-ruins-werewolves|zz_ntb_debug|D A D D A D D A
+# mislanded or failed, session 40 (the Deep Roads "Where in?" pages differ; tour-redo.txt): orz-caridins-cross|zz_orz_debug|D D D A D D D D A A A A
+# mislanded or failed, session 40 (the Deep Roads "Where in?" pages differ; tour-redo.txt): orz-ortan-thaig|zz_orz_debug|D D D A D D D D A D A A A
+# mislanded or failed, session 40 (the Deep Roads "Where in?" pages differ; tour-redo.txt): orz-dead-trenches|zz_orz_debug|D D D A D D D D A D D A A A
+# mislanded or failed, session 40 (the Deep Roads "Where in?" pages differ; tour-redo.txt): orz-anvil-of-the-void|zz_orz_debug|D D D A D D D D A D D D A A A
+# Eamon's estate: the presses ended in Eamon's conversation with no load seen (AREAS.md)
+# den-eamon-estate|zz_den_debug|D A A A
+# Redcliffe has plot jumps only (zz_arl_debug "1. Plot jump.")
+arl-plot-start|zz_arl_debug|A A A
+arl-village-point|zz_arl_debug|A D A A A
+arl-castle-point|zz_arl_debug|A D D A A A

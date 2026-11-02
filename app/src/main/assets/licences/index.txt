@@ -1,0 +1,29 @@
+this-app.txt	Dragon Age Origins Recomp Android Duo (this app)	GPL-3.0-or-later	everything below put together: the Android app, its launcher and the runtime's glue
+xenia.txt	Xenia (xenia-canary)	BSD 3-Clause	the Xbox 360 GPU emulation (its Vulkan backend), the kernel and file system parts
+daorecomp.txt	DAORecomp	MIT	the recompilation of Dragon Age: Origins, its runtime, its game fixes and mod converter
+xenonrecomp.txt	XenonRecomp (XenonUtils)	MIT	the PowerPC-to-C++ recompiler and the runtime headers its output uses
+simde.txt	SIMD Everywhere	MIT	the Xbox 360's vector instructions on ARM
+lsfg-vk.txt	lsfg-vk	GPL-3.0	frame generation with Lossless Scaling's shaders (read from the player's own Lossless.dll, which the app does not include)
+fidelityfx-sdk.txt	AMD FidelityFX SDK	MIT	FSR 3.1 upscaling and frame generation
+fidelityfx-cas.txt	AMD FidelityFX CAS	MIT	the presenter's sharpening filter
+fidelityfx-fsr.txt	AMD FidelityFX FSR 1	MIT	the presenter's upscaling filter
+ffmpeg.txt	FFmpeg	LGPL-2.1-or-later	decoding the game's XMA audio (libavcodec, libavutil)
+libmspack.txt	libmspack	LGPL-2.1	unpacking the title update's compressed patch (LZX)
+glslang.txt	glslang	BSD 3-Clause, MIT and Apache-2.0 (per file)	building the shaders' SPIR-V
+vulkan-headers.txt	Vulkan-Headers	Apache-2.0 OR MIT	the Vulkan API's definitions
+vulkan-memory-allocator.txt	Vulkan Memory Allocator	MIT	GPU memory allocation
+fmt.txt	{fmt}	MIT	text formatting
+snappy.txt	Snappy	BSD 3-Clause	compression
+xxhash.txt	xxHash	BSD 2-Clause	hashing
+disruptorplus.txt	disruptorplus	MIT	the log's queue
+date.txt	date	MIT	clocks and calendars
+utfcpp.txt	UTF8-CPP	BSL-1.0	text encodings
+cxxopts.txt	cxxopts	MIT	settings
+tomlplusplus.txt	toml++	MIT	settings files
+stb.txt	stb_image	MIT or public domain (the author's choice of either)	reading and writing images
+tiny-aes-c.txt	tiny-AES-c	The Unlicense (public domain)	decrypting the game's executable
+tinysha1.txt	TinySHA1	ISC-style (in its source)	checking files' SHA-1
+7zip.txt	7-Zip's C decoder (LZMA SDK)	public domain	unpacking .7z mods
+libarchive.txt	libarchive	BSD 2-Clause	unpacking .rar mods (RAR 4 and RAR 5)
+llvm.txt	LLVM (clang, lld, compiler-rt's builtins, libunwind)	Apache-2.0 WITH LLVM-exception	the compiler the app makes the game's code with on this device, from your disc
+android-ndk.txt	Android NDK (bionic's headers and link stubs, libc++'s headers)	Apache-2.0, BSD and others, as its NOTICE says	the C and C++ headers and libraries the game's code is compiled against on this device

@@ -1,0 +1,61 @@
+# PLAN 10.11: the areas' tour's list for the downloadable content - label|script|presses,
+# one jump a line (tour.sh), as tour.txt. The scripts are the modules' own debug scripts,
+# .ncs resources in their packages, so each is called as `!name` (files/route-call's
+# dispatch form, warden_game.cc); tour.sh's jump.sh passes the name through as given.
+#
+# The add-ins of the main campaign (the probe-dlc route: New Game -> the chooser's
+# Dragon Age: Origins, with the DLC kept): Warden's Keep (DAO_PRC_NRX_1, gwb), The Stone
+# Prisoner (DAO_PRC_CP_2, shl), Return to Ostagar (DAO_PRC_CP_1, kcc/kco).
+#   Warden's Keep's areas: gwb100ar_keep_first_floor, gwb110ar_keep_second_floor,
+#   gwb120ar_avernus_tower, gwb121ar_at_repaired, gwb200ar_soldiers_peak,
+#   gwb201ar_sp_repaired (and gwb000_arttest)
+#   The Stone Prisoner's: shl100ar_honnleath, shl200ar_cellar, shl300ar_cadash_thaig,
+#   cir367ar_shale (and shlar_test_start)
+#   Return to Ostagar's: kcc100ar_ostagar, kcc200ar_ishal, kcc300ar_tunnel, kco000ar_offer
+# The presses are filled in from each menu read (bash tools/areas/menu_read.sh '!zz_gwb_debug' ...).
+# Warden's Keep (read in session 40): 1 Complete an event, 2 Make a jump (1 Entering
+# Soldier's peak, 2 Entering the keep (First floor), 3 (Second floor), 4 Bridge,
+# 5 Soldier's Peak (Repaired), 6 No where), 3 Nothing, 4 Jump to art test area.
+gwb-soldiers-peak|!zz_gwb_debug|D A A
+gwb-keep-first-floor|!zz_gwb_debug|D A D A
+gwb-keep-second-floor|!zz_gwb_debug|D A D D A
+gwb-bridge|!zz_gwb_debug|D A D D D A
+gwb-soldiers-peak-repaired|!zz_gwb_debug|D A D D D D A
+# Return to Ostagar: 1 Jump to offer area, 2 Jump to Ostagar, 3 Jump to the battlefield,
+# 4 Jump to the Tower of Ishal, 5 Nothing for now.
+kco-offer-area|!zz_kcc_debug|A A
+kcc-ostagar|!zz_kcc_debug|D A A
+kcc-battlefield|!zz_kcc_debug|D D A A
+kcc-tower-of-ishal|!zz_kcc_debug|D D D A A
+# The Stone Prisoner: 1 Warp to a location (1 Shale Art Test Area, 2 Shale Offer,
+# 3 Honnleath, 4 Cadash Thaig, 5 MORE.., 6 Back), 2 Hire Shale, 3 Set Plot Flag, 4 Add
+# Shale to current area, 5 View Shale's Debug Discount Crystal Emporium!, 6 Cancel.
+shl-honnleath|!zz_shl_debug|A D D A A
+shl-cadash-thaig|!zz_shl_debug|A D D D A A
+shl-more-1|!zz_shl_debug|A D D D D A . A A
+shl-more-2|!zz_shl_debug|A D D D D A . D A A
+#
+# The campaigns of their own (New Game -> the chooser's other items; a route each):
+#   Awakening (DAO_PRC_EP_1): zz_vgk_debug (Vigil's Keep: vgk100ar_exterior,
+#     vgk210ar_throne_room, vgk220ar_dungeon, vgk310ar_upper, vgk320ar_middle,
+#     vgk330ar_deeproads, vgk400ar_siege_ext_a, vgk500ar_siege_ext_b), zz_coa_debug
+#     (the City of Amaranthine: coa100ar_city, coa110ar_inn, coa120ar_smugglers_tunnel,
+#     coa130ar_smugglers_cove, coa140ar_chantry, coa150ar_moonshine_den,
+#     coa160ar_anders_warehouse), zz_aoa_debug (the city's siege: aoa100ar_city_siege,
+#     aoa110ar_inn_siege, aoa130ar_smugglers_cove_sg, aoa140ar_chantry), zz_trp_debug
+#     (trp100ar_wending_wood, trp200ar_silverite_mine), zz_stb_debug (stb100ar_blackmarsh,
+#     stb200ar_blackmarsh_fade, stb210ar_fade_crypt), zz_ltl_debug (ltl100ar_deep_road_entrance,
+#     ltl200ar_kal_hirol_entrance, ltl300ar_kal_hirol_upper, ltl400ar_kal_hirol_smith,
+#     ltl500ar_kal_hirol_lower), zz_ltm_debug (ltm100ar_wastes, ltm200ar_drakes_fall,
+#     ltm300ar_nest), zz_rxa_debug (the countryside's encounters rxa100ar..rxa240ar),
+#     zz_int_debug (int100ar_exterior, int200ar_interior), zz_gxa_debug (the expansion's own)
+#   Leliana's Song (DAO_PRC_LEL): zz_prc_lel_debug (lel100ar_market, lel200ar_estate_ext,
+#     lel210ar_estate_int, lel220ar_estate_dun, lel300ar_hideout, lel400ar_chantry,
+#     lel500ar_shore_1, lel510ar_shore_2, lel520ar_shore_3)
+#   The Golems of Amgarrak (DAO_PRC_GIB): zz_gib_debug (gib000ar_intro, gib100ar_smithy, gibar_start)
+#   Witch Hunt (DAO_PRC_STR): zz_str_debug (str100ar_hut_exterior, str110ar_hut_interior,
+#     str200ar_tower_1, str210ar_basement, str300ar_elven_ruins, str400ar_cadash_thaig,
+#     str500ar_dragonbone_wastes, str510ar_mirror)
+#   The Darkspawn Chronicles (DAO_PRC_DRK): zz_drk_debug (drk100ar_gates, drk200ar_market,
+#     drk300ar_alienage, drk400ar_palace, drk500ar_fort, drk510ar_fort_roof)
+#   The item packs (Blood Dragon Armor, Feastday Gifts, Feastday Pranks) have no areas.

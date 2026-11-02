@@ -1,0 +1,7 @@
+# PLAN 10.11, session 40: The Golems of Amgarrak (DAO_PRC_GIB) - its plot debug script
+# calls "runscript zz_gib_bdebug warp_<area>", so each line is a direct jump with that
+# value ("-": no menu). The game on the probe-gib route:
+#   TOUR_ROUTE=probe-gib bash tools/areas/tour.sh tools/areas/tour-gib.txt
+# gib-intro (the campaign starts there; profiled on arrival)|!zz_gib_bdebug warp_gib000ar_intro|-
+gib-smithy|!zz_gib_bdebug warp_gib100ar_smithy|-
+gib-final-fight|!zz_gib_bdebug warp_finalfight|-

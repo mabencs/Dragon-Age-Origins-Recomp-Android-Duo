@@ -1,0 +1,107 @@
+# ──────────────────────────────────────────────────────────────────────
+# Copyrighted game material — NEVER commit. Personal use only.
+# These are your own legally-dumped discs and title updates. They stay
+# local. The repo contains only tooling, code and documentation.
+# ──────────────────────────────────────────────────────────────────────
+*.iso
+*.ISO
+TU_*
+*.xex
+default.xex
+*.erf
+*.rim
+*.gda
+*.GDA
+*.tlk
+*.gfx
+*.xds
+*.dds
+*.bik
+*.cif
+*.nxeart
+splash.dds
+
+# Extracted / intermediate game data
+/game/
+/gamedata/
+/extracted/
+/work/
+/dist/
+
+# ── Generated recompilation output (huge, reproducible from your disc) ─
+/ppc/
+/ppc_tu7/
+/recomp/generated/
+*.ppc.cpp
+*.ppc.h
+
+# ── Machine-local settings for the tools ──
+# tools/game_check.py's exemptions: the games a builder lets run during a build.
+tools/game_check.local.txt
+
+# ── Lossless Scaling's DLL (PLAN 9.14) ──
+# lsfg-vk's frame generation reads its shaders from Lossless Scaling's own DLL, which
+# each user supplies from their own copy of that program. Never committed.
+[Ll]ossless.dll
+
+# ── Build output ──
+/build/
+/out/
+cmake-build-*/
+.cxx/
+*.o
+*.a
+*.so
+*.apk
+*.aab
+*.so.dbg
+
+# ── Android / Gradle ──
+.gradle/
+local.properties
+/app/build/
+/captures/
+*.keystore
+*.jks
+!debug.keystore
+
+# ── Toolchain downloads ──
+/toolchain/
+/third_party/*/
+!/third_party/*/.gitkeep
+/.ndk/
+/.cmake/
+
+# ── IDE / OS ──
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Device captures ──
+# Screenshots and raw property dumps come off your own handheld and can show
+# anything that was on screen. The curated profile in device/*.md is committed;
+# the raw captures are not.
+/device/shots/
+/device/capture-*.txt
+
+# ── Logs, traces, captures ──
+*.log
+/logs/
+/traces/
+*.rgp
+*.gfxr
+*.perfetto-trace
+
+# ── Python tooling ──
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ── Mod downloads (PLAN 10.12-10.19): the owner's, never committed ──
+*.rar
+*.7z
+*.dazip

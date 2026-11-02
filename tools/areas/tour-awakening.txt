@@ -1,0 +1,58 @@
+# PLAN 10.11, session 40: Awakening's areas - label|script|presses, as tour.txt, the
+# scripts run through RunScript (`!name`). The game on the probe-awakening route (New
+# Game -> the chooser's second item, Awakening, with gxa_module_start.ncs hidden: the
+# expansion's default start area); run with TOUR_ROUTE=probe-awakening so a reboot comes
+# back there: TOUR_ROUTE=probe-awakening bash tools/areas/tour.sh tools/areas/tour-awakening.txt
+# Every module's menu (read in session 40) has its jump list first.
+#
+# Vigil's Keep (zz_vgk_debug: 1 Jump to a location -> 1 Vigil's Keep Proper, 2 VGK
+# Basements, 3 VGK Siege, 4 Cancel; 2 Set a plot variable; 3 Cancel)
+vgk-keep-proper|!zz_vgk_debug|A A . A A
+vgk-basements|!zz_vgk_debug|A D A . A A
+vgk-siege|!zz_vgk_debug|A D D A . A A
+# The City of Amaranthine (zz_coa_debug: 1 Jump to area -> 1 Amaranthine, 2 Amaranthine
+# Inn, 3 Smuggler's Cove, 4 Amaranthine Chantry, 5 more..., 6 Return to main options)
+coa-amaranthine|!zz_coa_debug|A A A
+coa-inn|!zz_coa_debug|A D A A
+coa-smugglers-cove|!zz_coa_debug|A D D A A
+coa-chantry|!zz_coa_debug|A D D D A A
+coa-more-1|!zz_coa_debug|A D D D D A . A A
+coa-more-2|!zz_coa_debug|A D D D D A . D A A
+coa-more-3|!zz_coa_debug|A D D D D A . D D A A
+# The siege of Amaranthine (zz_aoa_debug: 1 Jump to area -> 1 Amaranthine, 2 Amaranthine
+# Siege - Stage 1, 3 Stage 2, 4 Amaranthine Chantry - Siege Version, 5 more..., 6 Return)
+aoa-amaranthine|!zz_aoa_debug|A A A
+aoa-siege-stage-1|!zz_aoa_debug|A D A A
+aoa-siege-stage-2|!zz_aoa_debug|A D D A A
+aoa-chantry-siege|!zz_aoa_debug|A D D D A A
+# The Wending Wood (zz_trp_debug: 1 Jump to a location -> 1 The Wending Wood, 2 The
+# Silverite Mine, 3 Amaranthine, 4 Back, 5 Cancel, 6 More...)
+trp-wending-wood|!zz_trp_debug|A A A
+trp-silverite-mine|!zz_trp_debug|A D A A
+# Blackmarsh (zz_stb_debug: 1 Area Jump -> 1 Blackmarsh, 2 Blackmarsh (Fade), 3 Blackmarsh
+# (Fade) -- Dragon, 4 Crypt (Fade), 5 Back)
+stb-blackmarsh|!zz_stb_debug|A A A
+stb-blackmarsh-fade|!zz_stb_debug|A D A A
+stb-crypt-fade|!zz_stb_debug|A D D D A A
+# Kal'Hirol (zz_ltl_debug: 1 Jump to an area -> 1 Deep Road Entrance, 2 Kal Hirol
+# Entrance, 3 Upper Level, 4 Middle Level, 5 Lower Level, 6 Go back)
+ltl-deep-road-entrance|!zz_ltl_debug|A A A
+ltl-kal-hirol-entrance|!zz_ltl_debug|A D A A
+ltl-kal-hirol-upper|!zz_ltl_debug|A D D A A
+ltl-kal-hirol-middle|!zz_ltl_debug|A D D D A A
+ltl-kal-hirol-lower|!zz_ltl_debug|A D D D D A A
+# The Dragonbone Wastes (zz_ltm_debug: 1 Jump to a location -> 1 The Dragonbone Wastes,
+# 2 Drake's Fall, 3 The Nest)
+ltm-dragonbone-wastes|!zz_ltm_debug|A A A
+ltm-drakes-fall|!zz_ltm_debug|A D A A
+ltm-nest|!zz_ltm_debug|A D D A A
+# The countryside's encounters (zz_rxa_debug: 1 Jump to a location -> 1 Beach, 2 Canyon,
+# 3 Farm, 4 Forest; the next page the plot encounters)
+rxa-beach|!zz_rxa_debug|A A A
+rxa-canyon|!zz_rxa_debug|A D A A
+rxa-farm|!zz_rxa_debug|A D D A A
+rxa-forest|!zz_rxa_debug|A D D D A A
+# The introduction (zz_int_debug: 1 Jump to a location -> 1 Vigil's Keep Exterior,
+# 2 Vigil's Keep Interior)
+int-keep-exterior|!zz_int_debug|A A A
+int-keep-interior|!zz_int_debug|A D A A

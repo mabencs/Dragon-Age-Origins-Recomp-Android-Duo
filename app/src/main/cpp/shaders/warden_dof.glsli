@@ -1,0 +1,84 @@
+// PLAN 9.19: cinematic depth of field in conversations and cutscenes, on the upscaled
+// scene before the UI goes over it - DAORecomp's dao_dof.hlsli, ported:
+//   the focus, from the scene depth around the middle of the screen (warden_dof_focus),
+//   eased over frames, at once on a cut ->
+//   the scene at half size, linear, with each pixel's circle of confusion
+//   (warden_dof_prefilter) ->
+//   a disc of samples gathered around each half size pixel (warden_dof_blur) ->
+//   the blurred image blended over the sharp one by the circle of confusion
+//   (warden_dof_combine).
+// The circle of confusion comes from the scene's device depth alone: with the far plane
+// far beyond the near one, a pixel's camera distance is the near distance over its
+// depth's distance from the far end, so the ratio of two distances does not depend on
+// either plane.
+
+// Every pass's set: the scene depth (render size), the focus (2x1: the distance in
+// near-plane units, and the focus area's median distance, for finding cuts), two images
+// of the pass's own, its output, a linear sampler.
+layout(set = 0, binding = 0) uniform texture2D warden_dof_depth;
+layout(set = 0, binding = 1) uniform texture2D warden_dof_focus;
+layout(set = 0, binding = 2) uniform texture2D warden_dof_a;
+layout(set = 0, binding = 3) uniform texture2D warden_dof_b;
+layout(set = 0, binding = 5) uniform sampler warden_dof_linear;
+
+// Mirrored by DofConstants in warden_upscale.cc.
+layout(push_constant) uniform WardenDofConstants {
+  uvec2 display_size;
+  uvec2 half_size;  // display_size / 2, rounded up
+  uvec2 render_size;
+  // The circle of confusion's radius, in display pixels, of a surface at infinity with
+  // the lens focused at 1, and the largest radius applied.
+  float aperture;
+  float max_radius;
+  // How much of the effect is applied, 0 to 1 (eased in and out with the game's shots).
+  float strength;
+  // How far the focus moves towards the new one each frame, 0 to 1.
+  float focus_rate;
+  // The gamma the scene is encoded with.
+  float gamma;
+  uint samples;
+  uint flags;
+} warden_dof;
+
+// The focus is taken at once (a cut, or the effect starting).
+const uint kDofFlagSnap = 1u;
+// Shows the circle of confusion (red far, blue near) instead of the scene.
+const uint kDofFlagShow = 2u;
+// Linear colour the blur takes at most (a highlight's bokeh, not infinity).
+const float kDofMaxColor = 64.0;
+
+// A pixel's camera distance in near-plane units (the sky, at the far end, very far).
+float DofDistance(float depth) {
+  return 1.0 / max(1.0 - depth, 1.0e-7);
+}
+
+// The scene depth at a display pixel (the render pixel it is in).
+float DofDepthAt(uvec2 display_pixel) {
+  uvec2 render_pixel = min(uvec2((vec2(display_pixel) + 0.5) * vec2(warden_dof.render_size) /
+                                 vec2(warden_dof.display_size)),
+                           warden_dof.render_size - 1u);
+  return texelFetch(warden_dof_depth, ivec2(render_pixel), 0).r;
+}
+
+// The sharp zone around the focus, as multiples of its distance: in a shot of two
+// people (the nearer one the focus) both are sharp, and only the scene around them blurs.
+const float kDofSharpNear = 0.9;
+const float kDofSharpFar = 1.75;
+
+// The signed circle of confusion at a display pixel, in display pixels: positive behind
+// the sharp zone, negative in front of it.
+float DofCoc(uvec2 display_pixel) {
+  float focus = texelFetch(warden_dof_focus, ivec2(0, 0), 0).r;
+  float distance = DofDistance(DofDepthAt(display_pixel));
+  float edge = clamp(distance, focus * kDofSharpNear, focus * kDofSharpFar);
+  float coc = warden_dof.aperture * (1.0 - edge / distance);
+  return clamp(coc, -warden_dof.max_radius, warden_dof.max_radius) * warden_dof.strength;
+}
+
+vec3 DofLinear(vec3 color) {
+  return pow(max(color, vec3(0.0)), vec3(warden_dof.gamma));
+}
+
+vec3 DofEncode(vec3 color) {
+  return pow(max(color, vec3(0.0)), vec3(1.0 / warden_dof.gamma));
+}

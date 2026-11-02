@@ -1,0 +1,54 @@
+// PLAN 9.7: FXAA and the bilinear upscale in one pass - the presenter's bilinear
+// pass with NVIDIA's FXAA 3.11 (third_party/fxaa/FXAA3_11.h, its PC quality path) in
+// place of the plain bilinear sample. The same interface as Xenia's
+// guest_output_bilinear.ps.xesl - its push constants after the vertex shader's 16
+// bytes, the guest output as a texture and a sampler at bindings 0 and 1 - so the
+// presenter takes it in that pass's place (Settings -> Upscaling -> FXAA;
+// warden_gpu.cc, warden_paint_shader). FXAA runs at each panel pixel's place in the
+// guest output, its neighbourhood a guest texel apart: it finds the title's 1280x720
+// edges, and the linear sampler's fetches upscale as it goes. Luma is the green
+// channel (FXAA_GREEN_AS_LUMA), so no pass before it has to write luma to alpha.
+// tools/build_xenia_shaders.py compiles it with Xenia's shaders - warden_fxaa.ps.glsl
+// as it is, warden_hdr_fxaa.ps.glsl ending in PLAN 9.2's HDR10 encoding - against a
+// copy of the header patched for Vulkan's separate texture and sampler: GLSL builds a
+// combined sampler only where a texture function uses it, so the copy's FxaaTex is a
+// placeholder int and its fetches - textureGather's included - use XE_FXAA_SOURCE,
+// defined below.
+
+layout(push_constant) uniform XeFxaaConstants {
+  // 0-15: the vertex shader's (push constant offsets are across stages in GLSL).
+  layout(offset = 16) ivec2 xe_fxaa_output_offset;
+  layout(offset = 24) vec2 xe_fxaa_output_size_inv;
+};
+
+layout(set = 0, binding = 0) uniform texture2D xe_fxaa_source;
+layout(set = 0, binding = 1) uniform sampler xe_fxaa_sampler;
+
+layout(location = 0) out vec4 xe_fxaa_color;
+
+// The combined sampler the patched header's fetches use.
+#define XE_FXAA_SOURCE sampler2D(xe_fxaa_source, xe_fxaa_sampler)
+#define FXAA_PC 1
+#define FXAA_GLSL_130 1
+#define FXAA_GREEN_AS_LUMA 1
+// 12, FXAA's default: five steps along an edge; the Thor's GPU is busy enough.
+#define FXAA_QUALITY__PRESET 12
+#include "FXAA3_11.h"
+
+void main() {
+  ivec2 pixel = ivec2(gl_FragCoord.xy) - xe_fxaa_output_offset;
+  // + 0.5: the pixel's centre, as the bilinear pass samples it.
+  vec2 position = (vec2(pixel) + 0.5) * xe_fxaa_output_size_inv;
+  vec2 texel = 1.0 / vec2(textureSize(sampler2D(xe_fxaa_source, xe_fxaa_sampler), 0));
+  xe_fxaa_color = vec4(
+      FxaaPixelShader(position, vec4(0.0),
+                      0, 0, 0,  // the textures: the patched header's fetches name them
+                      texel, vec4(0.0), vec4(0.0), vec4(0.0),
+                      // subpixel aliasing removal, edge threshold, its minimum:
+                      // FXAA's defaults, as Xenia's own fxaa.cs.hlsl has them.
+                      0.75, 0.166, 0.0833,
+                      // the console paths' parameters, unused on the PC path.
+                      8.0, 0.125, 0.05, vec4(0.0))
+          .rgb,
+      1.0);
+}

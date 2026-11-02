@@ -1,0 +1,148 @@
+Warden's Port app bring-up on the AYN Thor
+captured 2026-10-23 03:46:18Z
+apk 200622499 bytes, AYN Thor, Android 13 (API 33)
+============================================================
+
+LIFECYCLE
+  JNI_OnLoad: 19 methods registered
+  startup() = true in 90 ms
+  pad slot 0: id=10 vendor=0x2020 product=0x0111 analogTriggers=true hat=true "Odin Controller"
+  surfaceCreated
+  surfaceChanged 1920x1080 format=4
+
+DISPLAY (platform)
+  display id                         0
+  wide colour gamut supported        yes
+  window got wide colour gamut       yes
+  refresh rate                       120.000 Hz
+  HDR types                          HDR10 HLG
+  HDR luminance max/min              420 / 0 nits
+
+
+INPUT MAPPING SELF-TEST
+  RESULT: ok                         20/20 checks pass
+CONTROLLERS
+  slot 0  vendor 0x2020  product 0x0111  Odin Controller
+    descriptor                     8e1073ea5832500672194344d81498833991c43c
+    analog triggers                yes
+    hat axes                       yes
+    events seen                    0 key, 0 axis
+    held                           none
+    pressed since attach           none
+    axes                           L 0,0  R 0,0  LT 0  RT 0
+
+GAME DATA
+  already extracted to
+    /storage/emulated/0/Android/data/dev.daorecompandroid.duo/files/gamedata
+
+WARDEN'S PORT - phase 5, not yet playable
+  renderer       ready      Vulkan device up, presenting
+  game data      ready      extracted to app storage
+  guest code     linked     53108 functions, 82210000-83203F30
+  kernel         stubs      251 declared, 0 implemented
+  image          loaded     decrypted and verified against the build
+  boot           NOT YET    no guest thread - entry point never called
+
+  Nothing to start yet: the game's code is linked but is never called.
+  What follows is what the port can measure about this device.
+
+GUEST MEMORY
+  virtual membase                  0x75d842c000
+  physical membase                 0x767842c000 (0xA0000000 view)
+  0xA0000000 -> 0xC0000000         aliased
+  0xA0000000 -> 0xE0001000         aliased
+  0xC0000000 -> 0xA0000000         aliased
+  page reported read-only          yes
+  watched write completed          yes
+  invalidation callbacks fired     1
+  callback reported                00001000 + 1000
+  page writable again              yes
+  RESULT                           aliasing and write watch both work
+
+DEVICE
+  name                               Adreno (TM) 740
+  api version                        1.3.128
+  driver version                     0x802A4035
+  graphics+compute queue family      0
+PRESENTATION SUPPORT
+  VK_KHR_surface                     yes
+  VK_KHR_android_surface             yes
+  VK_KHR_swapchain                   yes
+  VK_EXT_swapchain_colorspace        yes
+  presenter created                  yes
+
+CPU TOPOLOGY
+  cpu0   2016000 kHz  efficiency
+  cpu1   2016000 kHz  efficiency
+  cpu2   2016000 kHz  efficiency
+  cpu3   2803200 kHz  performance
+  cpu4   2803200 kHz  performance
+  cpu5   2803200 kHz  performance
+  cpu6   2803200 kHz  performance
+  cpu7   3187200 kHz  prime
+  prime cores                      7
+  performance cores                3,4,5,6
+  efficiency cores                 0,1,2
+  sched_setaffinity accepted       yes
+  mask read back after pinning     7
+  restored                         0,1,2,3,4,5,6,7
+
+SURFACE  1920x1080
+  graphics queue can present         yes
+  current extent                     1920x1080
+  swapchain images                   3..64
+  present modes                      MAILBOX FIFO other other
+  MAILBOX available                  yes
+  swapchain formats (12)
+    R8G8B8A8_UNORM               SRGB_NONLINEAR
+    R8G8B8A8_SRGB                SRGB_NONLINEAR
+    R8G8B8A8_UNORM               BT709_LINEAR
+    R8G8B8A8_UNORM               DISPLAY_P3_NONLINEAR
+    R8G8B8A8_SRGB                DISPLAY_P3_NONLINEAR
+    R5G6B5_UNORM_PACK16          SRGB_NONLINEAR
+    R16G16B16A16_SFLOAT          SRGB_NONLINEAR
+    R16G16B16A16_SFLOAT          EXTENDED_SRGB_LINEAR
+    R16G16B16A16_SFLOAT          EXTENDED_SRGB_NONLINEAR
+    A2B10G10R10_UNORM_PACK32     SRGB_NONLINEAR
+    A2B10G10R10_UNORM_PACK32     DISPLAY_P3_NONLINEAR
+    R8_UNORM                     PASS_THROUGH
+  DISPLAY_P3_NONLINEAR               yes
+  10-bit swapchain format            yes
+  HDR10_ST2084                       no
+
+PRESENT
+  window open                        yes
+  paint connection size              1920x1080
+  swapchain connected                yes
+  frames painted                     1
+
+TITLE IMAGE
+  loaded at                      82000000, 20971520 bytes
+  entry point                    82AB2650
+  stack requested                256 KB
+  title update                   /storage/emulated/0/Android/data/dev.daorecompandroid.duo/files/gamedata/../TU_12K2260_0000004000000.00000000001O1 (STFS)
+  patch overlay                  0 written, 25 already present
+  mflr r12 at entry              70.5% of 53108 entry points
+  verdict                        matches the linked recompilation
+
+GUEST BOOT
+  indirect-call table            53108 entries at 83400000 (31 MB)
+  entry point                    82AB2650 found in the function table
+  state                          ready to call
+  Not called yet. The first unimplemented kernel import will abort the
+  process by design - its name is the next thing to implement, and the
+  import report lists everything reached in order.
+
+KERNEL IMPORTS
+  declared by the title          251
+  reached so far                 0
+  nothing has called one yet - no guest code has run
+
+SCREEN
+  screenshot                         1920x1080
+  row 540                            #000000  #000000  #000000
+  row 810                            #000000  #000000  #000000
+  row 1069                           #000000  #000000  #000000
+  VERDICT                            black - the presented letterbox, surface visible
+
+no crashes, no native fatals

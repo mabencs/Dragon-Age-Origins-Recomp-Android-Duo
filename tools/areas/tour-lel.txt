@@ -1,0 +1,15 @@
+# PLAN 10.11, session 40: Leliana's Song (DAO_PRC_LEL) - zz_prc_lel_debug: 1 Jump
+# somewhere -> 1 Before the Betrayal (1 Start of the Estate (Exterior), 2 (Interior),
+# 3 Before jumping to The Hideout, 4 In the hideout, 5 Start of the Return to the Estate,
+# 6 Before the Betrayal Scene) | 2 After the Betrayal (1 Start of the Prison, 2 Before
+# going to the Chantry, 3 Start of the Chantry, 4 The landing on Shore 1, 5 Before the
+# final battle, 6 Stop). The game on the probe-lel route:
+#   TOUR_ROUTE=probe-lel bash tools/areas/tour.sh tools/areas/tour-lel.txt
+lel-estate-exterior|!zz_prc_lel_debug|A A A
+lel-estate-interior|!zz_prc_lel_debug|A A D A
+lel-hideout|!zz_prc_lel_debug|A A D D D A
+lel-return-to-estate|!zz_prc_lel_debug|A A D D D D A
+lel-prison|!zz_prc_lel_debug|A D A A
+lel-chantry|!zz_prc_lel_debug|A D A D D A
+lel-shore-1|!zz_prc_lel_debug|A D A D D D A
+lel-final-battle|!zz_prc_lel_debug|A D A D D D D A

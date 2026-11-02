@@ -1,0 +1,10 @@
+# PLAN 10.11, session 40: the prelude's two towers, in one game. "Start in the signal
+# tower" from anywhere - the night camp's own item included, which leaves the party in
+# the Wilds - answers the "red shirts" gate, whose first option starts the night version
+# of the King's camp properly (a load); the towers are jumped to from there.
+# The Tower of Ishal's level 3 first, from the arena's three-item menu ((MORE) -> 4);
+# the night camp's menu has a fourth item and the same presses land elsewhere.
+pre-ishal-level-3|zz_pre_debug|A D D D D D A D D D A
+pre-night-camp-proper|zz_pre_debug|A D D D A A
+pre-signal-tower|zz_pre_debug|A D D D A
+pre-tower-top|zz_pre_debug|A D D D D A

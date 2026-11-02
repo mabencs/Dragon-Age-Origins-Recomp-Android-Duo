@@ -1,0 +1,28 @@
+// PLAN 9.4: a rectangle of one of Xenia's host render targets copied into an FSR 3.1
+// input (warden_upscale.cc): the scene's depth tile by tile, and the image before the UI.
+// DAORecomp's dao_upscale_copy.hlsli. The including shader defines WARDEN_COPY_FORMAT,
+// the destination's storage format, and WARDEN_COPY_VALUE, the texel stored from the
+// fetched one (`texel`).
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform texture2D warden_copy_source;
+layout(set = 0, binding = 1, WARDEN_COPY_FORMAT) uniform writeonly image2D warden_copy_dest;
+
+layout(push_constant) uniform WardenCopyConstants {
+  ivec2 source_offset;
+  ivec2 dest_offset;
+  uvec2 size;
+  // The lowest source texel read: a half-pixel-offset edge at a resolution scale.
+  ivec2 source_min;
+} warden_copy;
+
+void main() {
+  uvec2 id = gl_GlobalInvocationID.xy;
+  if (any(greaterThanEqual(id, warden_copy.size))) {
+    return;
+  }
+  ivec2 source = max(ivec2(id) + warden_copy.source_offset, warden_copy.source_min);
+  vec4 texel = texelFetch(warden_copy_source, source, 0);
+  imageStore(warden_copy_dest, ivec2(id) + warden_copy.dest_offset, WARDEN_COPY_VALUE);
+}

@@ -1,0 +1,20 @@
+#version 450
+// PLAN 10.9: the Adreno's min with a NaN operand, and the multiplication rule's FMin
+// form against the Or form, on runtime inputs so nothing is folded.
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer In { vec2 pairs[]; };
+layout(std430, binding = 1) writeonly buffer Out { vec4 results[]; };
+
+float mul_or(float a, float b) {
+  return (abs(a) == 0.0 || abs(b) == 0.0) ? 0.0 : a * b;
+}
+float mul_fmin(float a, float b) {
+  return (min(abs(a), abs(b)) == 0.0) ? 0.0 : a * b;
+}
+
+void main() {
+  uint i = gl_GlobalInvocationID.x;
+  if (i >= pairs.length()) return;
+  float a = pairs[i].x, b = pairs[i].y;
+  results[i] = vec4(min(a, b), min(b, a), mul_or(a, b), mul_fmin(a, b));
+}

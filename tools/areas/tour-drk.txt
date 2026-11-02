@@ -1,0 +1,9 @@
+# PLAN 10.11, session 40: The Darkspawn Chronicles - its console script zz_drk takes the
+# area as its value (RUNSCRIPT_VAR: gates, market, alienage, palace, fort, roof), so each
+# line is a direct jump ("-": no menu). The game on the probe-drk route:
+#   TOUR_ROUTE=probe-drk bash tools/areas/tour.sh tools/areas/tour-drk.txt
+# drk-gates (the campaign's start) was profiled on arrival; drk-market likewise.
+drk-alienage|!zz_drk alienage|-
+drk-palace|!zz_drk palace|-
+drk-fort|!zz_drk fort|-
+drk-fort-roof|!zz_drk roof|-

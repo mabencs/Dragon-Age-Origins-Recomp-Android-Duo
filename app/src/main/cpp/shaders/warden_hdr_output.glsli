@@ -1,0 +1,51 @@
+// PLAN 9.2: the presenter's final pass made HDR10. The Thor's panel takes HDR10, but its
+// Vulkan swapchain offers no PQ colour space, so the swapchain is the 10-bit one and its
+// window's buffers are tagged BT.2020 PQ once it is made (warden_gpu.cc,
+// warden_swapchain_created); each final pass then has an HDR variant that ends in
+// WardenHdrEncode (the warden_hdr_*.ps.glsl wrappers). DAORecomp's way for an SDR image
+// (DAORecomp's dao_hdr_output.ps.hlsl): the game's colours made linear, the highlights
+// expanded toward the panel's peak - the shadows and midtones untouched - and white at
+// the paper white; then the primaries to BT.2020 and the PQ curve.
+//
+// The constants are specialization constants, set as the pipeline is made: the paper
+// white and the panel's peak in nits (Settings -> HDR paper white; Android's
+// Display.HdrCapabilities), and Vivid (Settings -> Colour): the game's values read as
+// Display-P3's, as the SDR Vivid reads them, rather than Rec.709's.
+
+layout(constant_id = 0) const float kWardenHdrPaperWhite = 200.0;
+layout(constant_id = 1) const float kWardenHdrPeak = 420.0;
+layout(constant_id = 2) const int kWardenHdrVivid = 0;
+
+// The sRGB curve, as Android decodes the SDR swapchain's sRGB-tagged values: the
+// picture's shadows as the SDR output shows them.
+vec3 WardenSrgbToLinear(vec3 color) {
+  return mix(color * (1.0 / 12.92), pow((color + 0.055) * (1.0 / 1.055), vec3(2.4)),
+             greaterThan(color, vec3(0.04045)));
+}
+
+vec3 WardenHdrEncode(vec3 color) {
+  vec3 linear_color = WardenSrgbToLinear(clamp(color, 0.0, 1.0));
+  // Inverse tonemap on luminance (hue-preserving): the identity in the shadows and the
+  // midtones, a rational expansion that takes SDR white to the peak.
+  float peak_ratio = kWardenHdrPeak / kWardenHdrPaperWhite;
+  if (peak_ratio > 1.0) {
+    float luminance = dot(linear_color, vec3(0.2126, 0.7152, 0.0722));
+    float expanded = luminance / max(1.0 - luminance * (1.0 - 1.0 / peak_ratio),
+                                     1.0 / peak_ratio);
+    float weight = smoothstep(0.18, 1.0, luminance);
+    float target = mix(luminance, expanded, weight * weight);
+    linear_color *= luminance > 0.0 ? target / luminance : 1.0;
+  }
+  // To BT.2020's primaries (column-major): from Rec.709, or Display-P3 for Vivid.
+  vec3 wide = kWardenHdrVivid != 0
+      ? mat3(0.753833, 0.045744, -0.001210,
+             0.198597, 0.941777, 0.017601,
+             0.047570, 0.012479, 0.983609) * linear_color
+      : mat3(0.627404, 0.069097, 0.016391,
+             0.329283, 0.919540, 0.088013,
+             0.043313, 0.011362, 0.895595) * linear_color;
+  // SMPTE ST 2084 (PQ) of the light in nits, 10,000 at 1.
+  vec3 y = clamp(wide * (kWardenHdrPaperWhite / 10000.0), 0.0, 1.0);
+  vec3 ym = pow(y, vec3(0.1593017578125));
+  return pow((0.8359375 + 18.8515625 * ym) / (1.0 + 18.6875 * ym), vec3(78.84375));
+}
