@@ -50,7 +50,6 @@ Status values: `done` · `partial` · `deferred` (by the owner) · `not done` ·
 | AMD Anti-Lag 2 / NVIDIA Reflex | Desktop-driver features with no Android equivalent |
 | Neural rendering (RDNA 4) | Desktop GPU only |
 | 240 fps / unlimited | Meaningless on a 120 Hz panel |
-| The update checker | No online functionality in the app |
 
 ---
 

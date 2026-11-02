@@ -303,6 +303,20 @@ shows both, with the commit.
 
 ---
 
+## D15 — The launcher checks for updates (2026-11-02)
+
+The app had no network permission and the README promised it never connected to anything.
+The owner chose a real check at each launch, over opening the page by hand or a check on
+request, with an install from the launcher and a flag for releases that must not be installed
+that way. So the app holds INTERNET and REQUEST_INSTALL_PACKAGES, and `AppUpdate.java` is their
+only user: the launcher only, never a start straight into the game, and the game's runtime stays
+as a console with no cable. The README says what it does and what GitHub sees. It reads the
+release list, as GitHub's "latest" leaves out pre-releases, and the newest release decides: a
+manual one is what is shown even over an older one that could install, as that flag means the
+update needs care. Only the published package installs itself (a debug build is another app),
+after the size and SHA-256 match GitHub's, and Android's installer asks the player and refuses
+another key or a lower version.
+
 ## D14 — The game's code made on the device; a published APK
 
 **Decision (the owner, 2026-11-02, PLAN 12):** "I want to be able to publish an apk that

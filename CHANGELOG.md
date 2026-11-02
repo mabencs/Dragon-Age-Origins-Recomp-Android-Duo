@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.2-alpha - "Open Alpha"
+
+### New
+
+- **Updates from the launcher.** Each time the launcher opens it asks GitHub whether a newer
+  version is out. If so, a row under Launch offers **Download & install**: it checks the
+  download against GitHub's checksum and hands it to Android, which asks you to confirm. Your
+  saves, game data and settings stay. The first time, Android also asks you to allow installs
+  from this app, and the app closes as it installs, so open it again after.
+- Some releases are marked **Manual update**: the row then opens the release's page.
+
+**This changes the app's privacy promise.** It used to have no network permission at all. The
+launcher now connects to GitHub for this, and for nothing else. The game itself stays offline,
+and nothing about you or your game is sent, though GitHub sees an ordinary request from your
+connection. Without a connection there is no row, and the game plays as ever.
+
+### Fixed
+
+- **The second screen could be missing after the device woke**, showing the home app instead of
+  the deck until the app was restarted. The deck now waits for the screen to come on, and comes
+  back with the game even if it had closed.
+
+### Known limits
+
+- Updates from the launcher start with this version: 0.1.1-alpha and earlier need this one
+  installed by hand.
+
 ## 0.1.1-alpha - "Open Alpha"
 
 An update for the second screen and three fixes. It installs over 0.1.0-alpha with your

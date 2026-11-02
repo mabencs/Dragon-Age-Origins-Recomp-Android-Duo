@@ -3678,6 +3678,24 @@ on a clean device, given the two disc images, makes the game's code and plays.
       before building, rather than the code being made from disc 2's TU6 first. Launch
       waits for it. The row is greyed when there is nothing to build.
 
+## Phase 13 — Updates from the launcher
+
+- [x] 13.1 **The update check and install (the owner asked, 2026-11-02; session 42, runs
+      614-618, DECISIONS D15).** `AppUpdate.java`: at each launcher start, off the main thread,
+      the releases list; a row under Launch when one is newer (`Update available: <version>`).
+      **Download & install** fetches the APK with its progress, checks the size and SHA-256
+      from the API's `digest`, and gives it to `PackageInstaller`. A release whose notes hold
+      `<!-- manual-update -->`, or with no APK or digest, and any build but the published one,
+      show **Manual update**, which opens the release's page. Launching the game cancels it.
+      Checked with a build of the published package at `-Pwarden.version=0.1.0-alpha`: the real
+      0.1.1-alpha found, 75,661,083 bytes verified, Android's first-time permission, cancel and
+      try again, and installed in place (version code 1000 to 1001). With a debug build's
+      `files/update-feed`: manual, nothing newer, drafts, the highest of several, no APK, an odd
+      tag, an empty list and a broken answer. The manual path on the published package was not
+      run: only a debug build takes a test list.
+
+---
+
 ## Risk register
 
 | # | Risk | Impact | Mitigation |

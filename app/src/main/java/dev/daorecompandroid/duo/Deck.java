@@ -196,9 +196,68 @@ final class Deck {
                 }
             }
         }
+        stopWaiting();
+        // BUG-110: wanted back whether or not it was found here: one gone with its process,
+        // or one that never came back, opens with the game too.
+        hidden = true;
         if (found) {
-            hidden = true;
             Log.i(TAG, "deck: put away with the game");
+        }
+    }
+
+    /** BUG-110: until the second display is on: the listener, and who it was asked of. */
+    private DisplayManager.DisplayListener waiting;
+    private DisplayManager waitingOn;
+
+    /**
+     * BUG-110: the game can come back before the second screen does - from the lid, by a
+     * millisecond - and the one try found no display on. The deck opens as it comes on.
+     */
+    private void waitForDisplay(Activity activity, File filesDir) {
+        DisplayManager displays = activity.getSystemService(DisplayManager.class);
+        if (displays == null || waiting != null) {
+            return;
+        }
+        Log.i(TAG, "deck: waiting for the second display");
+        waitingOn = displays;
+        waiting = new DisplayManager.DisplayListener() {
+            private void check() {
+                if (findDisplay(activity) != null) {
+                    stopWaiting();
+                    open(activity, filesDir);
+                }
+            }
+
+            @Override
+            public void onDisplayAdded(int displayId) {
+                check();
+            }
+
+            @Override
+            public void onDisplayChanged(int displayId) {
+                check();
+            }
+
+            @Override
+            public void onDisplayRemoved(int displayId) {
+            }
+        };
+        Handler main = new Handler(Looper.getMainLooper());
+        displays.registerDisplayListener(waiting, main);
+        // It may have come on before the listener was there.
+        DisplayManager.DisplayListener registered = waiting;
+        main.post(() -> {
+            if (waiting == registered) {
+                registered.onDisplayChanged(Display.DEFAULT_DISPLAY);
+            }
+        });
+    }
+
+    private void stopWaiting() {
+        if (waiting != null) {
+            waitingOn.unregisterDisplayListener(waiting);
+            waiting = null;
+            waitingOn = null;
         }
     }
 
@@ -214,11 +273,17 @@ final class Deck {
             return;
         }
         Log.i(TAG, "deck: back with the game");
-        open(activity, filesDir);
+        // Not asking findDisplay again here: the display can come on between the two, and
+        // then the deck neither opened nor waited.
+        if (!open(activity, filesDir)
+                && !"off".equals(Options.read(filesDir, Options.byFile("deck")))) {
+            waitForDisplay(activity, filesDir);
+        }
     }
 
     /** Closes a Presentation deck (DeckActivity closes with the game's process). */
     void close() {
+        stopWaiting();
         if (presentation != null) {
             presentation.dismiss();
             presentation = null;

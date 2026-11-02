@@ -83,6 +83,8 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-111](#bug-111) | our app (the update, PLAN 13.1) | medium | **FIXED** | Before it shipped: cancelling Android's first install dialog left the launcher's row on Installing for good, ignoring taps |
+| [BUG-110](#bug-110) | our app (the deck, PLAN 8.1) | medium | **FIXED** | Back from sleep, the deck could be missing: the game came back before the second screen, the one try found no display on, and only a new start brought it back |
 | [BUG-109](#bug-109) | the device's firmware (AYN Thor) / our app | high | **WORKED AROUND** | The game's sound did not follow Android's media volume: audible with the media volume at 0. The app now applies the volume itself, on AYN devices |
 | [BUG-108](#bug-108) | our runtime (frame generation, PLAN 9.14) | high | **FIXED** | With an upscaler and Lossless frame generation, a conversation whose start had ten frames without a 3D scene froze the game for nearly 4 s: the generator made again at the small size and again at the large |
 | [BUG-107](#bug-107) | our app (the deck, PLAN 8.5) | medium | **FIXED** | The deck's Quests tab never showed a completed quest: they are in a list of their own, Journal.CompletedPlots, which it did not read - and it listed subplots as quests of their own, in no group |
@@ -2932,6 +2934,41 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-111
+**The update row stuck on Installing after a cancel**
+Our app (`AppUpdate.java`, PLAN 13.1) · severity medium · **FIXED** session 42, before release
+
+**What it looked like** (run 615): Cancel on Android's "not allowed to install unknown apps"
+dialog, and the row stayed on `Installing…`, taps doing nothing.
+
+**Cause.** That dialog tells the session nothing when cancelled, so no status ever came.
+
+**Fixed.** With the dialog shown and the launcher back in front, `AppUpdate.resumed` abandons the
+session and offers Try again. Run 617: `INSTALL_FAILED_ABORTED`, the row on Try again, and a
+second download went on to install.
+
+## BUG-110
+**Back from sleep, the second screen showed the launcher and not the deck**
+Our app (`Deck.java`, PLAN 8.1) · severity medium · **FIXED** session 42
+
+**What it looked like** (the owner): resuming a locked game, the lower screen held the home
+app. Home and back did not bring the deck back.
+
+**Cause.** `GameActivity.onStart` runs before the second display is on: a lid wake logged
+`deck: back with the game` and, a millisecond later, `deck: no second display`, as
+`findDisplay` asks for STATE_ON. That was the only try. `Deck.hide` also set `hidden` only when
+it found a deck to put away, so with none there `show` did nothing: Home and back did not help,
+nor after the deck's process died (BUG-106's end).
+
+**Fixed.** `Deck.show` waits for the display with a `DisplayListener` when the deck did not open
+(and looks once more after registering it); `hide` always marks the deck as wanted back.
+
+The first fix asked `findDisplay` a second time before deciding to wait: the display could come
+on between the two, and the deck neither opened nor waited (found by the first of three test
+rounds). Run 616: 20 of 20 sleep and wake rounds at gaps from 0.3 to 6 s, with `input keyevent
+KEYCODE_SLEEP` and `KEYCODE_WAKEUP`, the deck having to wait in 17; the deck's process killed,
+back with Home and back.
 
 ## BUG-109
 **The game's sound did not follow Android's media volume**

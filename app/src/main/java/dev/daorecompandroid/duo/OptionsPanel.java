@@ -61,6 +61,9 @@ final class OptionsPanel {
         /** Before the game: Build chosen, with the game's code able to be made (PLAN 12.8). */
         void onBuildChosen();
 
+        /** PLAN 13.1: before the game, the app's update row chosen. */
+        void onAppUpdateChosen();
+
         /** PLAN 10.15: before the game, Restore an earlier save chosen. */
         void onRestoreSaves();
 
@@ -96,6 +99,10 @@ final class OptionsPanel {
         /** Build's value: "not yet", "start", the making's progress, "done" or "failed". */
         String buildValue = "not yet";
         String buildDetail = "";
+        /** PLAN 13.1: the app's update row; no name, no row. */
+        String appUpdateName = "";
+        String appUpdateValue = "";
+        String appUpdateDetail = "";
         String imageValue = "";
         String imageDetail = "";
         String updateValue = "";
@@ -123,19 +130,21 @@ final class OptionsPanel {
 
     /** The pre-launch rows, then the options from FIRST_OPTION, then quitting. */
     private static final int LAUNCH_ROW = 0;
+    // PLAN 13.1: a newer version of the app, only while there is one (AppUpdate).
+    private static final int APP_UPDATE_ROW = 1;
     // PLAN 12.8 (the owner, 2026-11-02): the game's code made when the player says so,
     // once their files are in - not as soon as a title update is.
-    private static final int BUILD_ROW = 1;
-    private static final int IMAGE_ROW = 2;
+    private static final int BUILD_ROW = 2;
+    private static final int IMAGE_ROW = 3;
     // PLAN 10.10: the Ultimate Edition's disc 2 - Awakening and every DLC on it.
-    private static final int ULTIMATE_ROW = 3;
-    private static final int UPDATE_ROW = 4;
-    private static final int LOSSLESS_ROW = 5;
+    private static final int ULTIMATE_ROW = 4;
+    private static final int UPDATE_ROW = 5;
+    private static final int LOSSLESS_ROW = 6;
     // PLAN 10.15, 11.2: the saves - export, import, and the ones the game wrote over.
-    private static final int RESTORE_ROW = 6;
+    private static final int RESTORE_ROW = 7;
     // PLAN 10.12: the mods (ModsPage).
-    private static final int MODS_ROW = 7;
-    private static final int FIRST_OPTION = 8;
+    private static final int MODS_ROW = 8;
+    private static final int FIRST_OPTION = 9;
     /** What an option's asterisk means (the owner, 2026-11-02). */
     private static final String RESTART_NOTE =
             "* Needs a restart of the game: changed while playing, it applies at the next start";
@@ -598,7 +607,8 @@ final class OptionsPanel {
     }
 
     private boolean hidden(int row) {
-        return (row == photoRow && preLaunch)
+        return (row == APP_UPDATE_ROW && (!preLaunch || launch.appUpdateName.isEmpty()))
+                || (row == photoRow && preLaunch)
                 || (row == exportRow && (preLaunch || !host.debugMode()));
     }
 
@@ -673,6 +683,13 @@ final class OptionsPanel {
             }
             Log.i(TAG, "options: Build");
             host.onBuildChosen();
+            return;
+        }
+        if (selected == APP_UPDATE_ROW) {
+            if (preLaunch) {
+                Log.i(TAG, "options: the app's update row");
+                host.onAppUpdateChosen();
+            }
             return;
         }
         if (selected == IMAGE_ROW || selected == ULTIMATE_ROW || selected == UPDATE_ROW
@@ -820,6 +837,9 @@ final class OptionsPanel {
         values[aboutRow].setText("");
         values[LAUNCH_ROW].setText(launch.ready ? "" : launch.launchValue);
         values[BUILD_ROW].setText(launch.buildValue);
+        names[APP_UPDATE_ROW].setText(launch.appUpdateName);
+        values[APP_UPDATE_ROW].setText(launch.appUpdateValue);
+        rows[APP_UPDATE_ROW].setVisibility(hidden(APP_UPDATE_ROW) ? View.GONE : View.VISIBLE);
         values[IMAGE_ROW].setText(launch.imageValue);
         values[UPDATE_ROW].setText(launch.updateValue);
         values[LOSSLESS_ROW].setText(launch.losslessValue);
@@ -853,6 +873,8 @@ final class OptionsPanel {
             text = launch.launchDetail;
         } else if (selected == BUILD_ROW) {
             text = launch.buildDetail;
+        } else if (selected == APP_UPDATE_ROW) {
+            text = launch.appUpdateDetail;
         } else if (selected == IMAGE_ROW) {
             text = launch.imageDetail;
         } else if (selected == UPDATE_ROW) {
@@ -945,6 +967,8 @@ final class OptionsPanel {
     private void showLaunchRows(boolean show) {
         int visibility = show ? View.VISIBLE : View.GONE;
         rows[LAUNCH_ROW].setVisibility(visibility);
+        rows[APP_UPDATE_ROW].setVisibility(
+                show && !launch.appUpdateName.isEmpty() ? View.VISIBLE : View.GONE);
         rows[BUILD_ROW].setVisibility(visibility);
         rows[IMAGE_ROW].setVisibility(visibility);
         rows[UPDATE_ROW].setVisibility(visibility);

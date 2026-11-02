@@ -27,8 +27,12 @@ the header of [`STATUS.md`](STATUS.md) (**Next action**). A new machine is set u
   server addresses, LAN IPs, device serials, account names in paths, or the games and
   apps people use. Machine-local settings go in gitignored files (for example
   `tools/game_check.local.txt`).
-- **No online functionality in the app.** Network imports answer as a console with no
-  cable; never open a host socket, resolve a name, or add the INTERNET permission.
+- **No online functionality in the game.** Network imports answer as a console with no
+  cable; never open a host socket or resolve a name in the runtime. The app's one network
+  use is the launcher's update check and download (`AppUpdate.java`, the owner's decision of
+  2026-11-02, `docs/DECISIONS.md` D15): to GitHub, in the launcher only, sending nothing about
+  the player. Nothing else may use the INTERNET permission.
+- **A release that must not install itself** has `<!-- manual-update -->` in its notes.
 - **Scope setup requests literally:** "install the tools" means the tools; ask before
   running the build or verification pipeline.
 - **Never uninstall the app on the Thor** (`dev.daorecompandroid.duo`) - it deletes the

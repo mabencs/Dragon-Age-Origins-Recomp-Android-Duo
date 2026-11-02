@@ -24,9 +24,13 @@
 
     <!-- PLAN 12.5: making the game's code on the device (GameCodeService) - about ten
          minutes, in the foreground so it goes on with the app put away, the CPU held
-         awake with the screen off. No network permission: none is ever needed. -->
+         awake with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- PLAN 13.1: the launcher's update check and its download (AppUpdate), the app's
+         only network use; the game itself stays offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:label="${appLabel}"

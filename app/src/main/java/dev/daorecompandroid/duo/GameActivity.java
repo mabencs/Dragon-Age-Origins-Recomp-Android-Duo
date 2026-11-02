@@ -294,6 +294,10 @@ public final class GameActivity extends Activity {
         if (preLaunch) {
             reportHost.setVisibility(View.GONE);
             optionsPanel.openPreLaunch(launchState());
+            // PLAN 13.1: the launcher only - a start straight into the game never asks.
+            appUpdate = new AppUpdate(this,
+                    () -> optionsPanel.setLaunchState(launchState()));
+            appUpdate.check();
         }
         bootWhenReady();
     }
@@ -361,6 +365,9 @@ public final class GameActivity extends Activity {
     protected void onResume() {
         super.onResume();
         inFront = true;
+        if (appUpdate != null) {
+            appUpdate.resumed();
+        }
         reportMediaVolume();
         goFullscreen();
         if (runtimeStarted) {
@@ -712,11 +719,21 @@ public final class GameActivity extends Activity {
         }
 
         @Override
+        public void onAppUpdateChosen() {
+            if (appUpdate != null) {
+                appUpdate.choose();
+            }
+        }
+
+        @Override
         public void onLaunchChosen() {
             if (!preLaunch) {
                 return;
             }
             preLaunch = false;
+            if (appUpdate != null) {
+                appUpdate.cancel();
+            }
             bootWanted = true;
             optionsPanel.beginGame();
             Log.i(TAG, "launch: Launch Dragon Age chosen in the settings");
@@ -781,8 +798,16 @@ public final class GameActivity extends Activity {
      * The pre-launch rows as things are: the game data extracted (or how far the
      * extraction is), the title update in place, and whether Launch is offered.
      */
+    /** PLAN 13.1: the launcher's update check, none in a start straight into the game. */
+    private AppUpdate appUpdate;
+
     private OptionsPanel.LaunchState launchState() {
         OptionsPanel.LaunchState state = new OptionsPanel.LaunchState();
+        if (appUpdate != null && appUpdate.state() != AppUpdate.NOTHING) {
+            state.appUpdateName = appUpdate.rowName();
+            state.appUpdateValue = appUpdate.rowValue();
+            state.appUpdateDetail = appUpdate.rowDetail();
+        }
         long[] progress = NativeBridge.extractProgress();
         long extractState = progress != null && progress.length > 0 ? progress[0] : 0;
         boolean extracting = extractState == 1 || extractState == 2;

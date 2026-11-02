@@ -961,7 +961,8 @@ python tools/release.py                    # proves it; keeps it in build/releas
 owner's disc image and title update file names; any path of the build machine (a
 drive's Users or Repos folder - CMakeLists.txt maps them to `ndk`, `src` and `home`). It keeps the APK, the unstripped
 libwarden.so and `build-id.txt` (the build id a tombstone from that release names). Build
-a release from a committed tree: About this app shows the commit, "+changes" when there
+a release from a committed tree (and put `<!-- manual-update -->` in the notes of one that must
+not install from the launcher, PLAN 13.1): About this app shows the commit, "+changes" when there
 were uncommitted ones. Since PLAN 12.6 the release is the one that is published
 (DECISIONS D14): it holds no game code, so `release.py` also fails one that has
 `libdaogame.so`, a symbol of the game's translated functions in any library
@@ -1278,6 +1279,19 @@ with the camera-turn presses about 749 a frame, without them about 2,130.
   between: `frame pacing:` mode switches (none should come at a conversation's start
   with frame generation on), `frame times: a title frame of ... ms` (over 50 ms),
   `Pipeline created in ... ms` (over 3 ms), `VkPipelineCache data unchanged`.
+
+### The update check (PLAN 13.1)
+
+- A real update: `gradlew :app:assembleRelease -Pwarden.version=<an older version>`, install it
+  (it is a separate app from the debug build, with no game data), open its launcher, and the
+  newest release on GitHub is offered. Remove it after. Its first install asks to allow installs
+  from the app.
+- The other states: a debug build reads `files/update-feed`, if there, in place of GitHub - the
+  API's JSON (`tag_name`, `draft`, `body`, `html_url`, `assets` with `name`, `size`, `digest`,
+  `browser_download_url`). The log says `update check: ...`. Remove the file after.
+- `adb install` needs a Windows path here (`C:/...`): `/c/...` fails with `failed to stat` under
+  `MSYS2_ARG_CONV_EXCL='*'`, and a script that goes on tests the old build. Stop on anything but
+  `Success`.
 
 ### Debugging Mode's report (PLAN 11.1)
 

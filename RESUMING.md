@@ -545,7 +545,7 @@ which must pass before an APK is published (`docs/TESTING.md`). Next, in order:
 3. **The open bugs:** BUG-042 and BUG-047 (rare; a reproduction first), BUG-058.
 4. **The owner's deferred items,** when asked: 9.15 (LS1), 9.9.
 
-**Session 42 (2026-11-02):** the deck's Quests and Codex fold, its long texts are read while open, and the Items tab equips and uses (PLAN 8.11, 8.12; BUG-105 to BUG-107), and a conversation's 4 s freeze with frame generation is gone (BUG-108). Left there: a trap's Use. Released as 0.1.1-alpha (`CHANGELOG.md`).
+**Session 42 (2026-11-02):** the deck's Quests and Codex fold, its long texts are read while open, and the Items tab equips and uses (PLAN 8.11, 8.12; BUG-105 to BUG-107), and a conversation's 4 s freeze with frame generation is gone (BUG-108). Left there: a trap's Use. Released as 0.1.1-alpha (`CHANGELOG.md`). Then BUG-110 and the launcher's updates (PLAN 13.1, D15): a release that must not install from the launcher has `<!-- manual-update -->` in its notes.
 
 Below are the earlier resume notes, newest first, kept for their detail.
 

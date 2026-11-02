@@ -75,7 +75,10 @@ as a native Android app, with the lower screen as a companion display.
   - turn mods on and off, and set their load order.
 - **Photo mode**, an **on-screen touch controller**, the developers' own **cheats**, and a
   **Debugging Mode** that packs a bug report into one file.
-- **No internet.** The app has no network permission and never connects to anything.
+- **Updates from the launcher.** Each time the launcher opens it asks GitHub whether a newer
+  version exists, and can download and install it when you press the button. That is the
+  app's only use of the internet: the game itself never connects to anything, and nothing
+  about you or your game is sent. GitHub sees an ordinary request from your connection.
 
 ---
 
@@ -234,6 +237,17 @@ the main menu.
 - **Putting the game away.** Home, locking the device or closing the lid pause the game where
   it is; both screens go home together. The game comes back where you left it. Android may
   still close it in the background; see **Autosave when put away**.
+
+### Updating
+
+When a newer version is out, a row appears under **Launch Dragon Age**. **Download & install**
+fetches it, checks it against the checksum GitHub publishes, and hands it to Android, which asks
+you to confirm; your saves, game data and settings stay. The first time, Android also asks you
+to allow installs from this app. The app closes as it installs: open it again. Without a
+connection there is simply no row, and the game plays as ever.
+
+A row that says **Manual update** opens the release's page instead: that version has to be
+installed by hand, and its notes say why.
 
 ### The launcher
 
