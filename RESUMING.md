@@ -11,7 +11,7 @@ the session log). This file is how to get a new machine to the point where you c
 continue, what the device holds, how the daily loop works, what comes next, and the
 things that cost an hour each when nobody said them.
 
-Brought up to date on 2026-11-02, at version 0.1.1-alpha ("Open Alpha"; 0.1.0-alpha, when the
+Brought up to date on 2026-11-02, at version 0.1.2-alpha ("Open Alpha"; 0.1.0-alpha, when the
 repository went public, for most of this file): §0-§3 and §5 describe the project as it is now; §4 and §6
 onwards are the loop and the lore, unchanged in substance since session 32.
 

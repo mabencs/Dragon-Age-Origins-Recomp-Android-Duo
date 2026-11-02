@@ -5,7 +5,7 @@ until 2026-11-01). Its package ids: `dev.daorecompandroid.duo` for debug builds 
 `prod.daorecompandroid.duo` for release builds.
 
 A static-recompilation port of the Xbox 360 game to an Android handheld. Version
-**0.1.1-alpha, "Open Alpha"**: free software (GPL-3.0-or-later) in a public repository,
+**0.1.2-alpha, "Open Alpha"**: free software (GPL-3.0-or-later) in a public repository,
 with a published APK that holds none of the game - the app makes the game's program on the
 player's device from their own disc (PLAN Phase 12).
 [`README.md`](README.md) is the user's manual. **To work on it, start with
