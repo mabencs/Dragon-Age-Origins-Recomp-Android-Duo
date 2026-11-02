@@ -1,7 +1,10 @@
 # Dragon Age Origins Recomp Android Duo
 
+*Disclaimer, all the work done by "me" in this repo, was done by Claude.
+
 **Version 0.1 — Open Alpha** · Dragon Age: Origins for the Xbox 360, natively recompiled for
 Android, made for the **AYN Thor** and its two screens.
+Should also be playable on other handheld gaming devices and phones as there is an on-screen controller overlay available. They are however untested.
 
 ![The game on the AYN Thor's two screens: Orzammar's Royal Palace with the Dwarf Noble and Gorim on
 the main screen, and the companion deck's Party tab - their portraits, health and stamina -
