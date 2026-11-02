@@ -1188,7 +1188,24 @@ VALUE`, bounded) and adds the deck's Data tab with everything the mirror holds;
 `files/deck-route` holding `presentation` makes the deck a Presentation in the game's
 process (8.1's Route B, for comparison). With `files/deck-trace` the mirror also dumps the
 data model's tree to the log (`deck: tree PATH = TEXT (N members)`) after ten seconds of
-exploring, twice at most - the roots are listed in `warden_deck.cc`. The deck's own reads
+exploring, twice at most - the roots are listed in `warden_deck.cc`. **The deck by adb:**
+`adb shell input -d 4 tap x y` (coordinates as `adb exec-out screencap -p -d <its physical
+id>` draws them; `dumpsys display` has the id). Never `adb shell input keyevent` without a
+display while the deck is up: it is a key for the top display, BUG-106's way in, and the
+game ignores it anyway. `files/inject-pad` drives the game live. **Anything that pauses the
+game while it explores autosaves, if Autosave when put away is on** - run 602's test of
+another app on the second screen opened it on the main one, and the Auto-save slot took the
+test's changes (put back from a backup): before testing writes on a player's save, back up
+`files/content/00000001`, open a menu first (`not exploring ... none`), and end with
+force-stop. `dumpsys input | grep -m1 FocusedDisplayId` is the display that has the keys now
+(the `dumpsys window` line of that name can be the last ANR's). **A background
+`boot_capture.sh` ends in a force stop:** one whose tool was stopped can live on and fire at
+the end of its settle time, in whoever's game is running then (session 42) - kill it and
+its `sleep` (`ps -ef`) before handing the device over. A "crash" with no tombstone: `adb shell
+dumpsys activity exit-info <package>` says `FORCE STOP` for a stop, and from which pid.
+**The output's level:** `dumpsys media.audio_flinger`, the thread's `Signal power history`
+(BUG-109): oldest line first, so read the last lines (the first are half a minute old, which
+cost run 612 a wrong reading), and a silent output adds no lines. The deck's own reads
 run only while it pulls; `files/deck-reads-staged` (a test switch) switches their
 patterns on one at a time, 15 s apart (`deck: read pattern N on`), to find one that
 changes what the game does (run 462: none). The tabs at the camp: `bash tools/route.sh

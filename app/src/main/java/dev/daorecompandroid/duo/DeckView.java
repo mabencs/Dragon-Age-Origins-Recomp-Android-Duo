@@ -29,7 +29,8 @@ import java.util.Map;
 
 /**
  * The second screen's deck (PLAN 8.2, 8.5, 8.6): a tab rail, the chosen tab, a footer.
- * Read-only (D6) but for one write path, the Quickbar tab's taps (PLAN 8.8): everything it
+ * Read-only (D6) but for the Quickbar tab's taps (PLAN 8.8) and the Items tab's buttons
+ * (PLAN 8.12): everything it
  * shows is the state mirror's - what the game's own UI is shown - or the frame counts. Updated about ten times a second by its host, which pulls
  * the data; the view never calls into the game.
  *
@@ -65,6 +66,11 @@ final class DeckView extends LinearLayout {
         }
 
         abstract void update(Map<String, String> values, long[] frames);
+
+        /** The long texts it has open: read patterns, one a line. */
+        String watching() {
+            return "";
+        }
     }
 
     private final Context context;
@@ -85,6 +91,13 @@ final class DeckView extends LinearLayout {
     private boolean perfVisible = true;
     private Map<String, String> lastValues = Collections.emptyMap();
     private long[] lastFrames;
+    /** What is unfolded on the Quests and Codex tabs, kept from one start to the next. */
+    private final android.content.SharedPreferences foldStore;
+    private final java.util.Set<String> unfolded = new java.util.TreeSet<>();
+    /** The long texts the game has given while they were open: back at once when reopened. */
+    private final Map<String, String> texts = new java.util.HashMap<>();
+    /** The current tab's open texts, for the host's pull thread (DeckSource.watch). */
+    private volatile String watches = "";
 
     DeckView(Context context, boolean showData) {
         this(context, showData, null, null);
@@ -94,6 +107,8 @@ final class DeckView extends LinearLayout {
         super(context);
         this.context = context;
         this.art = art;
+        foldStore = context.getSharedPreferences("deck-folds", Context.MODE_PRIVATE);
+        unfolded.addAll(foldStore.getStringSet("unfolded", Collections.emptySet()));
         headingFace = fonts != null ? fonts.heading : Typeface.create(Typeface.SERIF, Typeface.BOLD);
         bodyFace = fonts != null ? fonts.body : Typeface.SERIF;
         setOrientation(VERTICAL);
@@ -179,8 +194,48 @@ final class DeckView extends LinearLayout {
         lastValues = values;
         lastFrames = frames;
         tabs.get(current).update(values, frames);
+        watches = tabs.get(current).watching();
         footerLeft.setText(connected ? "Dragon Age: Origins" : "Waiting for the game…");
         footerRight.setText(connected ? values.size() + " values" : "");
+    }
+
+    /** The texts the current tab has open: read patterns, one a line (any thread). */
+    String watches() {
+        return watches;
+    }
+
+    /** A fold tapped: remembered, and shown at once. */
+    private void toggle(String fold) {
+        if (!unfolded.remove(fold)) {
+            unfolded.add(fold);
+        }
+        foldStore.edit().putStringSet("unfolded", new java.util.HashSet<>(unfolded)).apply();
+        refresh();
+    }
+
+    /** What a tap changed, shown now rather than at the next pull. */
+    private void refresh() {
+        tabs.get(current).update(lastValues, lastFrames);
+        watches = tabs.get(current).watching();
+    }
+
+    /** Where the Items tab's buttons go: the host sends it to the game, off the UI thread. */
+    interface Items {
+        void act(int action, int item, int ability);
+    }
+
+    private Items items;
+    private ItemsTab itemsTab;
+
+    void setItems(Items sink) {
+        items = sink;
+    }
+
+    /** The game's answer: "" it will do it, else why not; null it could not be reached. */
+    void itemAnswer(String why) {
+        if (itemsTab != null) {
+            itemsTab.answer(why == null ? "The game could not be reached." : why);
+        }
     }
 
     /**
@@ -219,6 +274,7 @@ final class DeckView extends LinearLayout {
                     : frame(STONE, BRASS_DIM));
         }
         tabs.get(index).update(lastValues, lastFrames);
+        watches = tabs.get(index).watching();
     }
 
     // ---- the tabs ----
@@ -937,6 +993,7 @@ final class DeckView extends LinearLayout {
     private abstract class ListTab extends Tab {
         final LinearLayout column;
         private String shownKey = "";
+        private final List<String> watched = new ArrayList<>();
 
         ListTab(String label) {
             super(label);
@@ -960,7 +1017,47 @@ final class DeckView extends LinearLayout {
             }
             shownKey = key;
             column.removeAllViews();
+            watched.clear();
             build(values);
+        }
+
+        @Override
+        String watching() {
+            return TextUtils.join("\n", watched);
+        }
+
+        /** Asks the game for a long text while the tab shows it open. */
+        void watch(String pattern) {
+            watched.add(pattern);
+        }
+
+        /** A category's bar: a tap unfolds what is under it, or folds it again. */
+        boolean foldBar(String text, String fold) {
+            boolean open = unfolded.contains(fold);
+            TextView bar = heading((open ? "▾  " : "▸  ") + text);
+            bar.setMinHeight(dp(44));
+            bar.setGravity(Gravity.CENTER_VERTICAL);
+            bar.setOnClickListener(v -> toggle(fold));
+            return open;
+        }
+
+        /** An entry's name: the same, for its own text. */
+        boolean foldRow(String text, int colour, String fold) {
+            boolean open = unfolded.contains(fold);
+            TextView row = line((open ? "▾  " : "▸  ") + text, 16, colour);
+            row.setTypeface(headingFace);
+            row.setMinHeight(dp(42));
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setOnClickListener(v -> toggle(fold));
+            return open;
+        }
+
+        /** An unfolded text, on parchment; `indent` for a subplot under its quest. */
+        TextView parchment(String text, int indent) {
+            TextView body = line(text, 14, INK_ON_PARCHMENT);
+            body.setBackgroundColor(PARCHMENT);
+            body.setPadding(dp(12 + indent), dp(8), dp(12), dp(8));
+            return body;
         }
 
         TextView heading(String text) {
@@ -991,11 +1088,10 @@ final class DeckView extends LinearLayout {
         }
 
         /** A line with the item's icon (the game's own, DeckArt) before its text. */
-        void itemLine(String iconName, String text) {
+        View itemLine(String iconName, String text) {
             Bitmap icon = art != null ? art.icon(iconName) : null;
             if (icon == null) {
-                line(text, 14, TEXT);
-                return;
+                return line(text, 14, TEXT);
             }
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(HORIZONTAL);
@@ -1009,6 +1105,7 @@ final class DeckView extends LinearLayout {
             label.setPadding(dp(8), 0, 0, 0);
             row.addView(label);
             column.addView(row);
+            return row;
         }
 
         void note(String text) {
@@ -1045,48 +1142,203 @@ final class DeckView extends LinearLayout {
         return android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_LEGACY);
     }
 
-    /** Quests: the journal's plots and objectives, the plot followed, the givers nearby. */
+    /** A quest as the journal's list holds it: its path there, and its subplots. */
+    private static final class Plot {
+        String path;
+        String resRef;
+        String name;
+        String parent;
+        String group;
+        boolean completed;
+        boolean updated;
+        final List<Plot> subplots = new ArrayList<>();
+
+        /** It or a subplot of it has news the journal has not shown. */
+        boolean anyUpdated() {
+            if (updated) {
+                return true;
+            }
+            for (Plot subplot : subplots) {
+                if (subplot.anyUpdated()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Quests, as the journal holds them (journal.gfx's QuestList and QuestGroup): its two
+     * pages, Current Quests (Journal.PlotList) and Completed Quests (Journal.CompletedPlots),
+     * each a list of Journal.PlotGroups by descending Priority, each group its quests with
+     * no ParentPlot; a quest's subplots are in its text, under it, to two levels. A group
+     * and a quest unfold on a tap, any number at once; the journal keeps one group open.
+     */
     private final class QuestsTab extends ListTab {
+        private static final String CURRENT = "Journal.PlotList.";
+        private static final String COMPLETED = "Journal.CompletedPlots.";
+        /** The Completed Quests page chosen. */
+        private static final String COMPLETED_PAGE = "quests:completed-page";
+
         QuestsTab() {
             super("Quests");
         }
 
         @Override
         String key(Map<String, String> values) {
-            return subtree(values, "Journal.PlotList.") + subtree(values, "Journal.PlotGivers.")
-                    + values.get("Journal.ActivePlot") + values.get("Party.InCamp");
+            return subtree(values, CURRENT) + subtree(values, COMPLETED)
+                    + subtree(values, "Journal.PlotGroups.")
+                    + subtree(values, "Journal.PlotGivers.")
+                    + values.get("Party.InCamp") + unfolded;
+        }
+
+        /** A list's quests with no parent, each with its subplots. */
+        private List<Plot> quests(Map<String, String> values, String list) {
+            Map<String, Plot> byResRef = new java.util.LinkedHashMap<>();
+            for (int i : indices(values, list)) {
+                Plot plot = new Plot();
+                plot.path = list + i + ".";
+                plot.resRef = orEmpty(values.get(plot.path + "ResRef"));
+                plot.name = orEmpty(values.get(plot.path + "Name"));
+                plot.parent = orEmpty(values.get(plot.path + "ParentPlot"));
+                plot.group = orEmpty(values.get(plot.path + "PlotGroup"));
+                plot.completed = "1".equals(values.get(plot.path + "Completed"));
+                plot.updated = "1".equals(values.get(plot.path + "Updated"));
+                byResRef.put(plot.resRef, plot);
+            }
+            List<Plot> quests = new ArrayList<>();
+            for (Plot plot : byResRef.values()) {
+                Plot parent = byResRef.get(plot.parent);
+                if (plot.parent.isEmpty()) {
+                    quests.add(plot);
+                } else if (parent != null) {
+                    parent.subplots.add(plot);
+                }
+            }
+            return quests;
+        }
+
+        /** The groups' resrefs in the journal's order, the ones it does not name last. */
+        private List<String> groupOrder(Map<String, String> values, List<Plot> quests) {
+            Map<String, Double> priority = new java.util.HashMap<>();
+            for (int g : indices(values, "Journal.PlotGroups.")) {
+                String group = "Journal.PlotGroups." + g + ".";
+                priority.put(orEmpty(values.get(group + "ResRef")),
+                        number(values.get(group + "Priority")));
+            }
+            List<String> order = new ArrayList<>();
+            for (Plot quest : quests) {
+                if (!order.contains(quest.group)) {
+                    order.add(quest.group);
+                }
+            }
+            order.sort((a, b) -> Double.compare(priority.getOrDefault(b, -1.0),
+                    priority.getOrDefault(a, -1.0)));
+            return order;
+        }
+
+        private String groupName(Map<String, String> values, String resRef) {
+            for (int g : indices(values, "Journal.PlotGroups.")) {
+                String group = "Journal.PlotGroups." + g + ".";
+                if (resRef.equals(values.get(group + "ResRef"))) {
+                    String name = orEmpty(values.get(group + "Name"));
+                    return name.isEmpty() ? "Other quests" : name;
+                }
+            }
+            return "Other quests";
+        }
+
+        /** The two pages' choice, as the journal has them. */
+        private void pages(int current, int completed) {
+            boolean onCompleted = unfolded.contains(COMPLETED_PAGE);
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(HORIZONTAL);
+            String[] names = {"Current Quests  (" + current + ")",
+                    "Completed Quests  (" + completed + ")"};
+            for (int i = 0; i < 2; i++) {
+                boolean chosen = (i == 1) == onCompleted;
+                TextView page = text(15, chosen ? BRASS : FAINT);
+                page.setTypeface(headingFace);
+                page.setText(names[i]);
+                page.setGravity(Gravity.CENTER);
+                page.setMinHeight(dp(44));
+                if (chosen) {
+                    page.setBackground(frame(STONE, BRASS_DIM));
+                } else {
+                    page.setOnClickListener(v -> toggle(COMPLETED_PAGE));
+                }
+                row.addView(page, new LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            }
+            column.addView(row);
+        }
+
+        /** A quest's unfolded text: its own, then each subplot's under a rule. */
+        private void questText(Map<String, String> values, Plot plot, boolean onCompleted,
+                int depth) {
+            // The current quests' texts are in the snapshot; a completed one's is asked for.
+            String path = plot.path + "Description";
+            if (onCompleted) {
+                watch(path);
+            }
+            String description = orEmpty(values.get(path));
+            String stored = "quest:" + plot.resRef;
+            if (description.isEmpty()) {
+                description = orEmpty(texts.get(stored));
+            } else {
+                texts.put(stored, description);
+            }
+            if (description.isEmpty()) {
+                description = onCompleted ? "Reading the journal…" : "";
+            }
+            if (!description.isEmpty()) {
+                parchment((depth > 0 && plot.completed ? "✓  " : "") + description, depth * 16);
+            }
+            if (depth < 2) {
+                for (Plot subplot : plot.subplots) {
+                    column.addView(rule(BRASS_DIM), new LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+                    questText(values, subplot, onCompleted, depth + 1);
+                }
+            }
         }
 
         @Override
         void build(Map<String, String> values) {
-            List<Integer> plots = indices(values, "Journal.PlotList.");
+            List<Plot> current = quests(values, CURRENT);
+            List<Plot> completed = quests(values, COMPLETED);
             if ("1".equals(values.get("Party.InCamp"))) {
                 line("In the party's camp", 13, FAINT);
             }
-            if (plots.isEmpty()) {
-                note("No quests in the journal yet.");
-            } else {
-                heading("Quests");
+            pages(current.size(), completed.size());
+            boolean onCompleted = unfolded.contains(COMPLETED_PAGE);
+            List<Plot> shown = onCompleted ? completed : current;
+            if (shown.isEmpty()) {
+                note(onCompleted ? "No quests completed yet." : "No quests in the journal yet.");
             }
-            // Each quest's name and its text, as the journal shows them - the open ones
-            // first, then the completed. The plot's other fields (Completed, PlotGroup ...)
-            // are the journal's bookkeeping, not shown (the owner, 2026-10-31).
-            for (boolean completed : new boolean[] {false, true}) {
-                for (int plot : plots) {
-                    String prefix = "Journal.PlotList." + plot + ".";
-                    if ("1".equals(values.get(prefix + "Completed")) != completed) {
-                        continue;
-                    }
-                    String name = orEmpty(values.get(prefix + "Name"));
-                    line((name.isEmpty() ? "Quest " + (plot + 1) : name)
-                                    + (completed ? "  (completed)" : ""), 16,
-                            completed ? FAINT : PARCHMENT)
-                            .setTypeface(headingFace);
-                    String description = orEmpty(values.get(prefix + "Description"));
-                    if (!description.isEmpty()) {
-                        line(description, 13, completed ? FAINT : TEXT);
+            for (String group : groupOrder(values, shown)) {
+                List<Plot> quests = new ArrayList<>();
+                boolean updated = false;
+                for (Plot quest : shown) {
+                    if (quest.group.equals(group)) {
+                        quests.add(quest);
+                        updated |= quest.anyUpdated();
                     }
                 }
+                String fold = (onCompleted ? "quests:done:" : "quests:") + group;
+                if (!foldBar(groupName(values, group) + "  (" + quests.size() + ")"
+                        + (updated ? "  •" : ""), fold)) {
+                    continue;
+                }
+                for (Plot quest : quests) {
+                    String name = quest.name.isEmpty() ? quest.resRef : quest.name;
+                    if (foldRow(name + (quest.anyUpdated() ? "  •" : ""),
+                            onCompleted ? TEXT : PARCHMENT, "quest:" + quest.resRef)) {
+                        questText(values, quest, onCompleted, 0);
+                    }
+                }
+            }
+            if (onCompleted) {
+                return;
             }
             List<Integer> givers = indices(values, "Journal.PlotGivers.");
             if (!givers.isEmpty()) {
@@ -1394,12 +1646,10 @@ final class DeckView extends LinearLayout {
     }
 
     /**
-     * Codex and journal: the codex's groups with what is unlocked (a tap opens an entry),
-     * and the journal's conversations.
+     * Codex and journal: the codex's groups with what is unlocked, each group and entry
+     * unfolding on a tap, and the journal's conversations.
      */
     private final class CodexTab extends ListTab {
-        private String open = "";
-
         CodexTab() {
             super("Codex");
         }
@@ -1407,7 +1657,25 @@ final class DeckView extends LinearLayout {
         @Override
         String key(Map<String, String> values) {
             return subtree(values, "Journal.CodexGroups.") + subtree(values, "Journal.Conversations.")
-                    + open;
+                    + unfolded;
+        }
+
+        /**
+         * An entry's text as the journal makes it (journal.gfx's UpdateDescription): its
+         * Descriptions in order, each without its summary, a blank line between. An
+         * unlocked entry has them whether or not the journal has shown it.
+         */
+        private String entryText(Map<String, String> values, String entry) {
+            List<String> pages = new ArrayList<>();
+            String prefix = entry + "Descriptions.";
+            for (int page : indices(values, prefix)) {
+                String text = orEmpty(values.get(prefix + page))
+                        .replaceAll("(?s)<summary>.*?</summary>", "").trim();
+                if (!text.isEmpty()) {
+                    pages.add(text);
+                }
+            }
+            return TextUtils.join("\n\n", pages);
         }
 
         @Override
@@ -1416,38 +1684,41 @@ final class DeckView extends LinearLayout {
             for (int g : indices(values, "Journal.CodexGroups.")) {
                 String group = "Journal.CodexGroups." + g + ".";
                 List<Integer> unlocked = new ArrayList<>();
+                boolean updated = false;
                 for (int e : indices(values, group + "CodexList.")) {
                     if ("0".equals(values.get(group + "CodexList." + e + ".Locked"))) {
                         unlocked.add(e);
+                        updated |= "1".equals(values.get(group + "CodexList." + e + ".Updated"));
                     }
                 }
                 if (unlocked.isEmpty()) {
                     continue;
                 }
                 any = true;
-                heading(orEmpty(values.get(group + "Name")) + "  (" + unlocked.size() + ")");
+                if (!foldBar(orEmpty(values.get(group + "Name")) + "  (" + unlocked.size() + ")"
+                        + (updated ? "  •" : ""), "codex:" + g)) {
+                    continue;
+                }
                 for (int e : unlocked) {
                     String entry = group + "CodexList." + e + ".";
-                    final String id = entry;
-                    TextView name = line(orEmpty(values.get(entry + "Name"))
-                            + ("1".equals(values.get(entry + "Updated")) ? "  •" : ""), 15,
-                            PARCHMENT);
-                    name.setOnClickListener(v -> {
-                        open = open.equals(id) ? "" : id;
-                        update(lastValues, lastFrames);
-                    });
-                    if (open.equals(entry)) {
-                        String text = orEmpty(values.get(entry + "Descriptions"));
-                        TextView body = line(text.isEmpty() ? "(the entry's text is not read yet)"
-                                : text, 13, INK_ON_PARCHMENT);
-                        body.setBackgroundColor(PARCHMENT);
-                        body.setPadding(dp(10), dp(6), dp(10), dp(6));
+                    String fold = "codex:" + g + "." + e;
+                    if (!foldRow(orEmpty(values.get(entry + "Name"))
+                            + ("1".equals(values.get(entry + "Updated")) ? "  •" : ""),
+                            PARCHMENT, fold)) {
+                        continue;
                     }
+                    watch(entry + "Descriptions.*");
+                    String text = entryText(values, entry);
+                    if (text.isEmpty()) {
+                        text = orEmpty(texts.get(fold));
+                    } else {
+                        texts.put(fold, text);
+                    }
+                    parchment(text.isEmpty() ? "Reading the journal…" : text, 0);
                 }
             }
             List<Integer> conversations = indices(values, "Journal.Conversations.");
-            if (!conversations.isEmpty()) {
-                heading("Conversations");
+            if (!conversations.isEmpty() && foldBar("Conversations", "codex:conversations")) {
                 for (int c : conversations) {
                     String prefix = "Journal.Conversations." + c + ".ConversationLines.";
                     for (int l : indices(values, prefix)) {
@@ -1471,15 +1742,122 @@ final class DeckView extends LinearLayout {
     }
 
     /** Items, read-only: what each member wears, the backpack, the purse. */
+    /** inventory.gfx's ItemUtils.ITEM_ABILITY_INVALID: an item with nothing to use. */
+    private static final int NO_ITEM_ABILITY = 200000;
+
     private final class ItemsTab extends ListTab {
+        /** The item unfolded: its path, and its name - a list that moved shuts it. */
+        private String openPath = "";
+        private String openName = "";
+        private String lastAnswer = "";
+
         ItemsTab() {
             super("Items");
+            itemsTab = this;
         }
 
         @Override
         String key(Map<String, String> values) {
             return subtree(values, "Party.Backpack.") + subtree(values, "Party.Money.")
-                    + equipment(values);
+                    + equipment(values) + openPath + lastAnswer
+                    + values.get("GUI.SelectedChar.Name")
+                    + values.get("GUI.SelectedChar.CanChangeEquipment");
+        }
+
+        void answer(String why) {
+            lastAnswer = why;
+            refresh();
+        }
+
+        /**
+         * An item's row; tapped, its numbers and text (warden_deck.cc's ItemDetails) and what
+         * the game lets be done with it. `wearer`: who has it on, null for the backpack.
+         */
+        private void item(Map<String, String> values, String path, String wearer) {
+            String name = orEmpty(values.get(path + "Name"));
+            View row = itemLine(values.get(path + "Icon"),
+                    name + stack(values.get(path + "StackSize")));
+            row.setMinimumHeight(dp(42));
+            row.setOnClickListener(v -> {
+                boolean open = path.equals(openPath);
+                openPath = open ? "" : path;
+                openName = open ? "" : name;
+                lastAnswer = "";
+                refresh();
+            });
+            if (!path.equals(openPath) || !name.equals(openName)) {
+                return;
+            }
+            watch(path + "*");
+            String description = orEmpty(values.get(path + "Description"));
+            String details = orEmpty(values.get(path + "Details"));
+            String text = details.isEmpty() ? description
+                    : description.isEmpty() ? details : details + "\n\n" + description;
+            parchment(text.isEmpty() ? "Reading the item…" : text, 0);
+            int slots = (int) number(values.get(path + "EquippableSlots"));
+            int ability = (int) number(values.get(path + "AbilityID"));
+            int id = (int) number(values.get(path + "ID"));
+            String who = orEmpty(values.get("GUI.SelectedChar.Name"));
+            boolean mayChange = !"0".equals(values.get("GUI.SelectedChar.CanChangeEquipment"));
+            boolean canUse = !"0".equals(values.get(path + "CanUse"));
+            if (wearer != null) {
+                // The game's commands act for the character it has selected.
+                if (id != 0 && "1".equals(values.get(path + "Irremovable"))) {
+                    line("This cannot be taken off.", 13, FAINT);
+                } else if (id != 0 && !wearer.equals(who)) {
+                    line("Select " + wearer + " in the game to take this off.", 13, FAINT);
+                } else if (id != 0) {
+                    itemButton("Unequip from " + wearer, mayChange, DeckSource.ITEM_UNEQUIP, id,
+                            ability);
+                    if (!mayChange) {
+                        line("Equipment cannot be changed just now.", 13, FAINT);
+                    }
+                }
+            } else if (id != 0 && slots != 0) {
+                // The game's own question (warden_deck.cc's CreatureCanUse): no button for
+                // what its inventory would not let be equipped either.
+                itemButton("Equip" + (who.isEmpty() ? "" : " on " + who), mayChange && canUse,
+                        DeckSource.ITEM_EQUIP, id, ability);
+                if (!canUse) {
+                    line((who.isEmpty() ? "The selected character" : who)
+                            + " cannot use this.", 13, FAINT);
+                } else if (!mayChange) {
+                    line("Equipment cannot be changed just now.", 13, FAINT);
+                }
+            } else if (id != 0 && ability > 0 && ability != NO_ITEM_ABILITY) {
+                itemButton("Use" + (who.isEmpty() ? "" : " on " + who), canUse,
+                        DeckSource.ITEM_USE, id, ability);
+                if (!canUse) {
+                    line((who.isEmpty() ? "The selected character" : who)
+                            + " cannot use this.", 13, FAINT);
+                }
+            }
+            if (!lastAnswer.isEmpty()) {
+                line(Character.toUpperCase(lastAnswer.charAt(0)) + lastAnswer.substring(1) + ".",
+                        13, FAINT);
+            }
+        }
+
+        private void itemButton(String text, boolean enabled, int action, int id, int ability) {
+            TextView button = text(15, enabled ? BRASS : FAINT);
+            button.setTypeface(headingFace);
+            button.setText(text);
+            button.setGravity(Gravity.CENTER);
+            button.setMinHeight(dp(44));
+            button.setBackground(frame(STONE, enabled ? BRASS_DIM : EDGE));
+            if (enabled) {
+                button.setOnClickListener(v -> {
+                    lastAnswer = "";
+                    if (items != null) {
+                        items.act(action, id, ability);
+                    }
+                });
+            }
+            LayoutParams params = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.topMargin = dp(6);
+            params.bottomMargin = dp(6);
+            column.addView(button, params);
         }
 
         private String equipment(Map<String, String> values) {
@@ -1507,10 +1885,9 @@ final class DeckView extends LinearLayout {
                 }
                 heading(orEmpty(values.get("Party.Members." + m + ".Name")));
                 for (int slot : slots) {
-                    String name = orEmpty(values.get(prefix + slot + ".Name"));
-                    if (!name.isEmpty()) {
-                        itemLine(values.get(prefix + slot + ".Icon"),
-                                name + stack(values.get(prefix + slot + ".StackSize")));
+                    if (!orEmpty(values.get(prefix + slot + ".Name")).isEmpty()) {
+                        item(values, prefix + slot + ".",
+                                orEmpty(values.get("Party.Members." + m + ".Name")));
                     }
                 }
             }
@@ -1520,9 +1897,7 @@ final class DeckView extends LinearLayout {
                 line("Empty, or not read yet.", 13, FAINT);
             }
             for (int item : items) {
-                String prefix = "Party.Backpack." + item + ".";
-                itemLine(values.get(prefix + "Icon"),
-                        orEmpty(values.get(prefix + "Name")) + stack(values.get(prefix + "StackSize")));
+                item(values, "Party.Backpack." + item + ".", null);
             }
         }
 

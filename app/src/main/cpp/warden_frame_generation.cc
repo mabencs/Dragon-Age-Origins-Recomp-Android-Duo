@@ -111,11 +111,11 @@ constexpr uint32_t kSummaryOutputs = 300;
 // first frame after the game's menu, which FSR 3.1 does not upscale) costs nothing.
 constexpr uint32_t kStableSizeOutputs = 10;
 // BUG-092: guest outputs without a generated frame that keep the pairs' pacing - a
-// conversation's first frame has no 3D scene, so no image to generate from, and the
-// pacing's switch off and back for it cost the game a 60-100 ms frame and the panel
-// seconds of uneven frames. A longer gap (the menu's 10 outputs at another size, BUG-081)
-// paces as without frame generation.
-constexpr uint32_t kPacingGapOutputs = 8;
+// conversation's first frames have no 3D scene (one to ten of them, BUG-108), so no image
+// to generate from, and the pacing's switch off and back for them cost the game a 60-100 ms
+// frame and the panel seconds of uneven frames. A longer gap, a second at the game's 30 fps
+// (a menu), paces as without frame generation.
+constexpr uint32_t kPacingGapOutputs = 30;
 // The dump switch's seconds without a number.
 constexpr int kDumpAfterSeconds = 120;
 
@@ -733,6 +733,18 @@ bool FrameGeneration::Ready(uint32_t width, uint32_t height, bool generated_show
     // BUG-081: made again only once the new size has held - until then the real frames
     // alone, the generator kept for the size it has.
     if (generator_) {
+      // BUG-108: and never for a smaller size. With an upscaler the frames without a 3D
+      // scene are smaller - a conversation's first ten, a menu's - and the world comes
+      // back at the size the generator has: made down and up again, about 2 s each, for a
+      // picture that needs no generated frames.
+      if (uint64_t(width) * height < uint64_t(width_) * height_) {
+        new_width_ = 0;
+        new_height_ = 0;
+        new_size_outputs_ = 0;
+        ++window_real_only_;
+        Pace(false);
+        return false;
+      }
       if (width != new_width_ || height != new_height_) {
         new_width_ = width;
         new_height_ = height;
@@ -746,6 +758,9 @@ bool FrameGeneration::Ready(uint32_t width, uint32_t height, bool generated_show
       XELOGI("Frame generation: the guest output is {}x{} now, not {}x{} - the generator "
              "made again",
              width, height, width_, height_);
+      // The frames meanwhile are the game's alone: no pairs to pace.
+      pacing_gap_ = UINT32_MAX;
+      warden::FramePacingFrameGeneration(false);
     }
     if (!MakeGenerator(width, height)) {
       failed_ = true;

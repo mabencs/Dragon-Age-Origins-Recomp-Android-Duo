@@ -320,6 +320,21 @@ void SendEngineMessage(PPCContext& ctx, uint8_t* base, const std::string& text) 
   XELOGI("[{}] send-message: \"{}\" sent", warden::CurrentGuestThreadName(), text);
 }
 
+// The deck's (QueueEngineMessage), sent as they come.
+std::mutex g_queued_mutex;
+std::vector<std::string> g_queued;
+
+void SendQueuedMessages(PPCContext& ctx, uint8_t* base) {
+  std::vector<std::string> due;
+  {
+    std::lock_guard<std::mutex> lock(g_queued_mutex);
+    due.swap(g_queued);
+  }
+  for (const std::string& text : due) {
+    SendEngineMessage(ctx, base, text);
+  }
+}
+
 void SendDueMessages(PPCContext& ctx, uint8_t* base, int32_t mode) {
   if (g_messages.empty() || mode < 0 || mode >= 16) {
     return;
@@ -421,6 +436,11 @@ bool RequestAutosave(bool forced) {
 // The engine's game mode as the controller's update last returned it (-2 before the
 // first): the deck's quickbar guard (PLAN 8.8) - the HUD's own copy does not see menus.
 int32_t GameMode() { return g_last_mode.load(); }
+
+void QueueEngineMessage(const std::string& text) {
+  std::lock_guard<std::mutex> lock(g_queued_mutex);
+  g_queued.push_back(text);
+}
 }  // namespace warden
 
 // The controller's update: the current mode, logged when it changes.
@@ -435,6 +455,7 @@ WARDEN_OVERRIDE(tu6_sub_82348590) {
   warden::photo::AfterModeUpdate(ctx, base, controller);
   const int32_t mode = CurrentMode(base, controller);
   ReadMessages();
+  SendQueuedMessages(ctx, base);
   SendDueMessages(ctx, base, mode);
   SendAutosaveIfAsked(ctx, base, mode);
   if (mode != g_last_mode.exchange(mode)) {

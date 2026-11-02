@@ -27,4 +27,8 @@ void SetHeadphoneSurround(bool surround);
 // next frame.
 void SetVolumeBoost(const std::string& value);
 
+// BUG-109: Android's media volume as a linear gain (1 = none), applied after everything
+// else, for devices that leave this track at one level whatever the volume says.
+void SetMediaVolume(float gain);
+
 }  // namespace warden

@@ -83,6 +83,11 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-109](#bug-109) | the device's firmware (AYN Thor) / our app | high | **WORKED AROUND** | The game's sound did not follow Android's media volume: audible with the media volume at 0. The app now applies the volume itself, on AYN devices |
+| [BUG-108](#bug-108) | our runtime (frame generation, PLAN 9.14) | high | **FIXED** | With an upscaler and Lossless frame generation, a conversation whose start had ten frames without a 3D scene froze the game for nearly 4 s: the generator made again at the small size and again at the large |
+| [BUG-107](#bug-107) | our app (the deck, PLAN 8.5) | medium | **FIXED** | The deck's Quests tab never showed a completed quest: they are in a list of their own, Journal.CompletedPlots, which it did not read - and it listed subplots as quests of their own, in no group |
+| [BUG-106](#bug-106) | our app (the deck, PLAN 8.1) | high | **FIXED** | With the second screen left as the top display, the first key waited on the deck's window, which takes none: "isn't responding", again after each Wait, and the deck gone with Close app - which a pad's button can press |
+| [BUG-105](#bug-105) | our app (the deck, PLAN 8.5) | medium | **FIXED** | Every codex entry on the deck said its text was not read yet: the entry's Descriptions are a list of pages, read as one text; long pages and line ends would have been lost as well |
 | [BUG-104](#bug-104) | our test tools (`tools/route.sh`) | high | **FIXED** | A test route's files left in the owner's app after run 598 - New Game went straight to a debug start, and the DLC were hidden from the main menu, at every start until removed; the launcher and the log now say when test files are in place |
 | [BUG-103](#bug-103) | our runtime (the game's code as a library, PLAN 12.2) | high | **FIXED** | With Title Update 6's game code (disc 2's) the game hung at startup: every thread's entry and callback was looked up in the indirect-call table at Title Update 7's place - XenonRecomp's PPC_LOOKUP_FUNC baked this build's image size into the runtime |
 | [BUG-102](#bug-102) | our runtime (saves, warden_xam.cc) | high | **FIXED** | A save cut off mid-write (the app swiped away during an autosave) was left half-written in its own folder - corrupted; saves are now written aside and put in place whole |
@@ -2927,6 +2932,126 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-109
+**The game's sound did not follow Android's media volume**
+The device's firmware (AYN Thor), worked around in our app (`GameActivity`,
+`warden_audio.cc`) · severity high · **WORKED AROUND** session 42
+
+**What it looked like** (the owner): tapping the volume buttons moved Android's slider but
+not the game; at media volume 0 the game could still be heard. Holding a button seemed to
+change it (not reproduced).
+
+**Cause, as far as it is known.** Android does its part: the volume events reach
+STREAM_MUSIC, the policy has this track in the Music group, and `dumpsys media.audio_flinger`
+shows stream 3 at -inf, -51, -42, -37, -30 for index 0 to 4. But the track's final gain (`G
+db`) stays at -2.6 at every index, against the -inf of tracks that are muted. It is not the
+usage: `AAUDIO_USAGE_MEDIA` behaves the same (run 612). What on the Thor detaches it is not
+known. The candidates: `com.odin.settings` owns an Equalizer on session 0 of this output
+that declares it implements volume control, and this firmware's AudioFlinger logs moving an
+effect from the app's session to session 0 as the stream opens (`admin: createEffect sessionId
+0: sessionId_old <the app's>`); `com.odin.gameassistant` and `com.odin.settings` also call
+setStreamVolume themselves. Other apps on the Thor were not compared.
+
+**Worked around.** On devices whose manufacturer is AYN, `GameActivity` reads the media volume
+(`VOLUME_CHANGED_ACTION`, the mute broadcast, a resume, an output change) and gives the native
+side Android's own curve for that output (`getStreamVolumeDb`), applied after the boost and
+ramped across a frame (`SetMediaVolume`). Not over Bluetooth, where the headset takes the
+volume. Elsewhere nothing changes, as Android's own volume would be applied on top.
+
+**Checked** (run 613, by the output's Signal power history): index 15 to 8 is 13.0 dB three
+times over, one gain and not two; tapped and held keys move the gain step by step (0.0076,
+0.0146, 0.0316 ...); at index 0 the power log stops, the output silent. Not checked: wired,
+USB and Bluetooth outputs.
+
+**A conversation's start froze the game for nearly 4 s**
+Our runtime (`warden_frame_generation.cc`, PLAN 9.14) · severity high · **FIXED** session 42
+
+**What it looked like** (the owner's report, session 42): "the game hitches a lot when
+starting conversations", in the Diamond Quarter at Orzammar, with FSR 3.1 and Lossless 2x.
+
+**Cause.** The frames without a 3D scene are not upscaled, so they reach frame generation at
+the render size (1120x630), not the panel's. BUG-081 made the generator again once a new size
+had held for 10 outputs; BUG-092's first frame was one such frame. Some conversation starts
+draw no scene for ten or eleven outputs, while the game streams the area's parts around the
+camera (`orz300d_2_4_0.rim` ...). Run 607: the generator made at 1120x630 (1,786 ms), and the
+scene's return at 1920x1080 made it again (2,113 ms) - the game held behind both, as a title
+frame each. The conversation in the owner's report had nine outputs, one short, so its log
+shows a mild start: the pacing's switch only (`kPacingGapOutputs` was 8). A menu open for ten
+outputs met the same rule (BUG-081).
+
+**Fixed.** The generator is never made again for a smaller size: those frames are shown real,
+and the pacing keeps its pairs for up to 30 outputs. Run 608, the same conversation from the
+same save: no rebuild and no pacing switch, 11 outputs without a scene in 193 ms, the panel's
+longest gap 33.8 ms against 2,135.7. A size that grows still makes it again once, after the
+first load, and that is the loading screen's cost.
+
+## BUG-107
+**The deck's Quests tab showed no completed quests, and subplots as quests**
+Our app (`DeckView.java`, `warden_deck.cc`, PLAN 8.5) · severity medium · **FIXED** session 42
+
+**What it looked like:** a quest finished left the deck for good, and a quest's subplots
+stood beside it in one flat list.
+
+**Cause.** The tab read `Journal.PlotList` and took its `Completed` field for the
+journal's Completed Quests page. journal.gfx keeps that page in a list of its own,
+`Journal.CompletedPlots`; `Completed` on a current plot marks a subplot done. Its
+QuestGroup lists only the plots with no `ParentPlot`, and folds a subplot's text into its
+parent's (AddSubplotDescriptions).
+
+**Fixed.** PLAN 8.11: the tab has the journal's two pages, its groups and its subplots.
+
+## BUG-106
+**The deck "isn't responding", and gone with Close app**
+Our app (`DeckActivity`, PLAN 8.1) · severity high · **FIXED** session 42
+
+**What it looked like** (the owner, session 42): the second screen's deck vanished, the
+game playing on. Before it, Android's "isn't responding" dialog on that screen.
+
+**Cause.** BUG-078 again, by another door. The deck's window never takes focus
+(`FLAG_NOT_FOCUSABLE`, so that a tap leaves the pad with the game), and the fix there gave
+the top display back once, as the deck connected. Anything later that leaves the second
+screen as the top display - on the Thor its dual-screen assistant, seen opening and
+closing before the first dialog; in run 602 another app finishing there - leaves a focused
+application with no focused window. The next key is held for it, and after 5 s Android
+calls the deck not responding (`Input dispatching timed out (Application does not have a
+focused window)`). Wait only starts the same 5 s again, as the key is still held. The
+dialog takes the focus, so a pad button can press its first choice, Close app:
+`dumpsys activity exit-info` has the deck's end as `reason=6 (ANR)`, `user request after
+error`. Here the held key was an `adb shell input keyevent` of ours; a pad's press does
+the same. (`adb shell input keyevent` has no place in a test while the deck is up.)
+
+**Fixed.** `DeckActivity.onTopResumedActivityChanged`: each time the deck comes to the top
+it asks the game's process whether the game is in front (`DeckService.GAME_IN_FRONT`) and,
+if it is, brings it forward as BUG-078's fix does. Never over Home.
+
+**Checked** (run 602): Settings opened on the second screen and closed with Back -
+`deck: this display came to the top - back to the game`, `FocusedDisplayId: 0`, the same
+key sent, no ANR and no dialog. With the game at Home, the same steps left it there.
+
+## BUG-105
+**Every codex entry on the deck: "the entry's text is not read yet"**
+Our app (`warden_deck.cc`, `DeckView.java`, PLAN 8.5) · severity medium · **FIXED** session 42
+
+**What it looked like** (the owner): that line under every entry, read in the journal or
+not.
+
+**Cause.** `Journal.CodexGroups.G.CodexList.E.Descriptions` is no text but a list:
+journal.gfx's UpdateDescription takes `.Descriptions.N` in order, cuts each one's
+`<summary>...</summary>`, and joins them with a blank line. The deck read the list's own
+node, always empty. Reading the entry in the game had nothing to do with it.
+
+Reading the pages alone would have met three more limits. `EngineString` refused anything
+over 4,096 characters; it turned line ends into spaces, the snapshot's lines being its
+separators, and so the paragraphs into one; and all the entries' text in the snapshot
+(335 entries, about 1.5 kB each, on top of its 100 kB, twice over as UTF-16 in the parcel)
+would pass Binder's limit late in the game.
+
+**Fixed.** PLAN 8.11: the deck reads the pages of the entries it has open, the data model's
+texts up to 64 kB with their line ends (U+E002 in the snapshot, `DeckSource.LINE_END`).
+Run 602: Orzammar Politics word for word as the journal has it, paragraphs included.
+Run 603: The Korcari Wilds, unread, on a new character that had never opened the journal -
+an entry's pages are there once it is unlocked.
 
 ## BUG-104
 **A test route's files stayed in the owner's app: New Game a debug start, the DLC hidden**

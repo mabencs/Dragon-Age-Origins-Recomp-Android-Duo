@@ -8,8 +8,9 @@ Inventory/Equipment.
 
 **As built (0.1 Open Alpha, 2026-11-02):** eight tabs - Party, Quickbar, Quests, Map,
 Tactics, Codex, Items, and Perf with the *Performance tab/overlay* option on. The deck
-runs in its own process (8.7) and is read-only but for the Quickbar's taps (8.8); the
-Party tab shows each member's own face, read back from the GPU (8.9). Not built: the
+runs in its own process (8.7) and is read-only but for the Quickbar's taps (8.8) and the
+Items tab's Equip, Use and Unequip buttons (8.12); the Quests and Codex tabs fold as the journal
+does, and their long texts are read only while open (8.11); the Party tab shows each member's own face, read back from the GPU (8.9). Not built: the
 map's pan, pinch and world-map toggle. This document is the design it was built from;
 where they differ, `docs/PLAN.md` Phase 8 has what was built and why, and
 [`FEATURES.md`](FEATURES.md) the state of each tab.

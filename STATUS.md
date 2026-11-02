@@ -6,7 +6,7 @@ starts by re-deriving context that was already paid for.
 
 | | |
 |---|---|
-| **Last updated** | 2026-11-02 (session 41) |
+| **Last updated** | 2026-11-02 (session 42) |
 | **Version** | **0.1.0-alpha, "Open Alpha"** - the first public release: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
@@ -1865,6 +1865,33 @@ Then continue from **Next action** at the top of this file.
 ## 9. Session log
 
 Newest first. One short entry per session: what changed, what's next.
+
+### 2026-11-02 (session 42) - the deck: folding, codex text, item details and actions, BUG-105 to 108
+
+- **Quests** as the journal has them: Current and Completed pages, the game's groups by
+  priority, each group and quest unfolding on a tap (PLAN 8.11, BUG-107). **Codex** the
+  same, and its entries readable once unlocked, read in the game or not (BUG-105; run 603
+  on an unread entry of a character that had never opened the journal). The long texts
+  are read only while open (`DeckSource.watch`), for Binder's limit.
+- **Items:** a tap shows what the game's Inspect does - stats, properties, requirement, text
+  (`ItemDetails`; runs 609-610 line for line against Inspect on the Maul and Blood Dragon
+  Plate) - with Equip, Use and Unequip, the inventory screen's own messages through the
+  engine's SendMessage (PLAN 8.12), greyed as the game greys them. Left: a trap's Use does
+  nothing (it wants a place on the ground).
+- **BUG-108, from the owner's report:** a conversation's start froze the game for nearly 4 s
+  with an upscaler and Lossless 2x: ten frames without a scene at the render size made the
+  generator again, and the scene's return again (runs 607, 608). It no longer shrinks.
+- **BUG-106:** the deck shown "not responding", then gone: with the second screen on top a
+  key waits on a window that takes none. The deck now gives the top display back whenever
+  it finds itself there, if the game is in front. Our own `input keyevent` set it off this
+  time; a pad press would have.
+- **BUG-109:** the game's sound did not follow the media volume on the Thor; the mixer's
+  stream volume moves, the track's gain does not, why is not known. The app applies it on
+  AYN devices (run 613: 13 dB from index 15 to 8, silence at 0).
+- A test's side effect, repaired: run 602's second-screen test paused the game while it
+  explored, and the put-away autosave took the test's changes into the owner's Auto-save
+  slot. Put back from the backup taken before (the same md5); `docs/TESTING.md` says how to
+  avoid it. Completed Quests has not been seen with a quest in it: neither save has one.
 
 ### 2026-11-02 (session 41, the end) - published on GitHub
 

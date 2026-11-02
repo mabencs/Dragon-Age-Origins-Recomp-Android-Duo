@@ -31,8 +31,10 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <map>
 #include <memory>
@@ -78,15 +80,19 @@ bool Guest(uint32_t address) { return address >= 0x10000 && address < 0xF0000000
 
 // An engine string (warden_game.cc's notes): UTF-16 with a buffer of 8 characters -
 // capacity at +24 (8 or more: the characters behind a pointer at +4, else inline at +4),
-// length at +20. False if it does not look like one.
-bool EngineString(uint8_t* base, uint32_t object, std::string* out) {
+// length at +20. False if it does not look like one. `longest` guards what is only
+// thought to be a string (the UI's token values); the data model's own texts run longer
+// (a codex entry's page), and those keep their line ends as `line_end` - the snapshot's
+// lines are its separators (DeckSource.parse puts them back).
+bool EngineString(uint8_t* base, uint32_t object, std::string* out, uint32_t longest = 4096,
+                  uint32_t line_end = ' ') {
   out->clear();
   if (!Guest(object)) {
     return false;
   }
   const uint32_t length = PPC_LOAD_U32(object + 20);
   const uint32_t capacity = PPC_LOAD_U32(object + 24);
-  if (length > 4096 || capacity < 7 || length > capacity) {
+  if (length > longest || capacity < 7 || length > capacity) {
     return false;
   }
   const uint32_t chars = capacity >= 8 ? PPC_LOAD_U32(object + 4) : object + 4;
@@ -107,7 +113,7 @@ bool EngineString(uint8_t* base, uint32_t object, std::string* out) {
     }
     // Tabs and line ends are the snapshot's separators; beyond the BMP, JNI's modified
     // UTF-8 would need surrogates - none in the game's text.
-    AppendUtf8(*out, c == '\t' || c == '\n' || c == '\r' ? ' ' : c >= 0x10000 ? '?' : c);
+    AppendUtf8(*out, c == '\n' ? line_end : c == '\t' || c == '\r' ? ' ' : c >= 0x10000 ? '?' : c);
   }
   return true;
 }
@@ -225,6 +231,10 @@ constexpr size_t kIntervals = 1000;
 std::atomic<uint64_t> g_guest_swaps{0};
 // When the deck last pulled a snapshot: the deck's own reads only while it does.
 std::atomic<int64_t> g_last_pull{0};
+// What the deck asked to watch, one pattern a line, until the game's thread takes it.
+std::mutex g_watch_mutex;
+std::string g_watch_wanted;
+bool g_watch_changed = false;
 std::atomic<uint64_t> g_presents{0};
 std::atomic<int64_t> g_last_swap{0};
 std::array<std::atomic<int64_t>, kIntervals> g_intervals{};
@@ -288,6 +298,43 @@ std::string Snapshot() {
     published = m.published;
   }
   return published ? *published : std::string();
+}
+
+std::string QueueItemAction(int action, int32_t item, int32_t ability) {
+  const int mode = warden::GameMode();
+  if (mode != 0 && mode != 1) {
+    XELOGI("deck: item action refused - the game is in mode {}, not exploring or fighting", mode);
+    return "only while exploring or fighting";
+  }
+  if (action == kItemUnequip) {
+    warden::QueueEngineMessage(fmt::format("GUI.SelectedChar.UnequipItem {}", item));
+    return "";
+  }
+  const bool use = action == kItemUse;
+  std::string caster;
+  {
+    Mirror& m = State();
+    std::lock_guard<std::mutex> lock(m.mutex);
+    auto id = m.values.find("GUI.SelectedChar.ID");
+    if (id != m.values.end()) {
+      caster = id->second;
+    }
+  }
+  if (use && caster.empty()) {
+    return "no character selected";
+  }
+  warden::QueueEngineMessage(
+      use ? fmt::format("GameModeController.PerformAbility {} {} {}", ability, caster, item)
+          : fmt::format("GUI.SelectedChar.EquipItem {} 255", item));
+  return "";
+}
+
+void SetWatches(const std::string& patterns) {
+  std::lock_guard<std::mutex> lock(g_watch_mutex);
+  if (patterns != g_watch_wanted) {
+    g_watch_wanted = patterns;
+    g_watch_changed = true;
+  }
 }
 
 void NoteGuestSwap(int64_t now_nanos) {
@@ -739,6 +786,11 @@ namespace warden::deck {
 namespace {
 
 constexpr uint32_t kNoNode = 0x83240658;
+// The longest text of the data model taken, and what stands for a line end in the
+// snapshot: a private-use character (DeckSource.LINE_END; DeckView.rich's marks are the
+// two before it).
+constexpr uint32_t kLongestText = 0x10000;
+constexpr uint32_t kLineEnd = 0xE002;
 
 class TokenReader {
  public:
@@ -763,7 +815,7 @@ class TokenReader {
     probe_.r3.u64 = text;
     probe_.r4.u64 = node;
     Virtual(node, 48);
-    const bool ok = EngineString(base, text, out);
+    const bool ok = EngineString(base, text, out, kLongestText, kLineEnd);
     Free(text);
     return ok;
   }
@@ -835,22 +887,200 @@ class TokenReader {
     return found;
   }
 
+  // A 2DA table's rows (vtable +20).
+  int TwoDaRows(uint32_t table) {
+    const uint32_t object = TwoDaTable(table);
+    if (!object) {
+      return 0;
+    }
+    probe_.r3.u64 = object;
+    Virtual(object, 20);
+    return probe_.r3.s32;
+  }
+
+  // A cell by the row's place and the column's hash, as a number, as the UI's
+  // Get2DAValueByRowIndexColumnHash reads it (tu6_sub_825E8020, sub_825E8290): vtable +24
+  // the column's place; +84 the cell's type - 1 an integer (+56), 2 a float (+52), 3 a
+  // bool (+60).
+  bool TwoDaCell(uint32_t table, uint32_t row, uint32_t column_hash, double* out) {
+    const uint32_t object = TwoDaTable(table);
+    if (!object) {
+      return false;
+    }
+    probe_.r3.u64 = object;
+    probe_.r4.u64 = column_hash;
+    Virtual(object, 24);
+    const uint32_t column = probe_.r3.u32;
+    if (column == 0xFFFFFFFFu) {
+      return false;
+    }
+    const uint32_t slot = area_ + 0x560;
+    PPC_STORE_U32(slot, 0xFFFFFFFFu);
+    probe_.r3.u64 = object;
+    probe_.r4.u64 = row;
+    probe_.r5.u64 = column;
+    probe_.r6.u64 = slot;
+    Virtual(object, 84);
+    const uint32_t type = PPC_LOAD_U32(slot);
+    if (type != 1 && type != 2 && type != 3) {
+      return false;
+    }
+    PPC_STORE_U32(slot, 0);
+    probe_.r3.u64 = object;
+    probe_.r4.u64 = row;
+    probe_.r5.u64 = column;
+    probe_.r6.u64 = slot;
+    Virtual(object, type == 1 ? 56 : type == 2 ? 52 : 60);
+    if (type == 1) {
+      *out = int32_t(PPC_LOAD_U32(slot));
+    } else if (type == 2) {
+      const uint32_t bits = PPC_LOAD_U32(slot);
+      float value = 0;
+      std::memcpy(&value, &bits, sizeof(value));
+      *out = value;
+    } else {
+      *out = PPC_LOAD_U8(slot) ? 1 : 0;
+    }
+    return true;
+  }
+
+  // A cell of a 2DA table as a number, whichever kind it holds (vtable +36: a float).
+  bool TwoDaNumber(uint32_t table, uint32_t row, uint32_t column, double* out) {
+    int32_t integer = 0;
+    if (TwoDaInt(table, row, column, &integer)) {
+      *out = integer;
+      return true;
+    }
+    const uint32_t object = TwoDaTable(table);
+    if (!object) {
+      return false;
+    }
+    const uint32_t slot = area_ + 0x560;
+    PPC_STORE_U32(slot, 0);
+    probe_.r3.u64 = object;
+    probe_.r4.u64 = row;
+    probe_.r5.u64 = column;
+    probe_.r6.u64 = slot;
+    Virtual(object, 36);
+    const uint32_t bits = PPC_LOAD_U32(slot);
+    float value = 0;
+    std::memcpy(&value, &bits, sizeof(value));
+    *out = value;
+    return true;
+  }
+
+  // A cell of a 2DA table as text (vtable +32).
+  bool TwoDaText(uint32_t table, uint32_t row, uint32_t column, std::string* out) {
+    const uint32_t object = TwoDaTable(table);
+    if (!object) {
+      return false;
+    }
+    const uint32_t text = area_ + 0x5A0;
+    probe_.r3.u64 = text;
+    Call(0x8261CAB0);
+    probe_.r3.u64 = object;
+    probe_.r4.u64 = row;
+    probe_.r5.u64 = column;
+    probe_.r6.u64 = text;
+    Virtual(object, 32);
+    const bool ok = EngineString(base, text, out);
+    Free(text);
+    return ok;
+  }
+
+  // A 2DA column's hash from its name, as Get2DAValueByColumnName makes it
+  // (tu6_sub_825E83F0): an engine string, sub_8261E4E0 of it, sub_82626E18 of that.
+  uint32_t ColumnHash(const std::string& name) {
+    const uint32_t chars = area_ + 0x600;
+    const size_t length = std::min<size_t>(name.size(), 120);
+    for (size_t i = 0; i < length; ++i) {
+      PPC_STORE_U8(chars + uint32_t(i), uint8_t(name[i]));
+    }
+    PPC_STORE_U8(chars + uint32_t(length), 0);
+    const uint32_t text = area_ + 0x5A0;
+    const uint32_t folded = area_ + 0x5C0;
+    probe_.r3.u64 = text;
+    probe_.r4.u64 = chars;
+    __imp__tu6_sub_8261CB80(probe_, base);
+    probe_.r3.u64 = folded;
+    probe_.r4.u64 = text;
+    Call(0x8261E4E0);
+    const uint32_t result = probe_.r3.u32;
+    const uint32_t capacity = PPC_LOAD_U32(result + 24);
+    probe_.r4.u64 = PPC_LOAD_U32(result + 20);
+    probe_.r3.u64 = capacity >= 8 ? PPC_LOAD_U32(result + 4) : result + 4;
+    Call(0x82626E18);
+    const uint32_t hash = probe_.r3.u32;
+    Free(folded);
+    Free(text);
+    return hash;
+  }
+
+  // The item with this id, or 0 (sub_82285ED0, as the UI's GetItemStat finds it).
+  uint32_t ItemObject(uint32_t id) {
+    probe_.r3.u64 = id;
+    Call(0x82285ED0);
+    return Guest(probe_.r3.u32) ? probe_.r3.u32 : 0;
+  }
+
+  // An item's stat, a row of table 109 (sub_822FB5D8, the handler's whole work).
+  double ItemStat(uint32_t item, uint32_t stat) {
+    probe_.r3.u64 = item;
+    probe_.r4.u64 = stat;
+    Call(0x822FB5D8);
+    return probe_.f1.f64;
+  }
+
+  // Whether a creature may use an item, as CreatureCanUseItem asks (tu6_sub_8243A730).
+  bool CreatureCanUse(uint32_t creature_id, uint32_t item) {
+    probe_.r3.u64 = creature_id;
+    Call(0x82285F20);
+    const uint32_t creature = probe_.r3.u32;
+    if (!Guest(creature)) {
+      return true;
+    }
+    probe_.r3.u64 = creature;
+    probe_.r4.u64 = item;
+    Call(0x823C1898);
+    return (probe_.r3.u32 & 0xFF) != 0;
+  }
+
+  // Whether an item's attribute requirements count, how many, and one of them
+  // (GetItemRequirements, tu6_sub_8243A880, for no particular creature).
+  int ItemRequirements(uint32_t item) {
+    probe_.r3.u64 = item;
+    Call(0x822FB7F8);
+    if (probe_.r3.u32 & 0xFF) {
+      return 0;
+    }
+    probe_.r3.u64 = item;
+    Call(0x822FB748);
+    return probe_.r3.s32;
+  }
+
+  bool ItemRequirement(uint32_t item, uint32_t index, uint32_t* attribute, double* value) {
+    const uint32_t kind = area_ + 0x568;
+    const uint32_t amount = area_ + 0x56C;
+    PPC_STORE_U32(kind, 0);
+    PPC_STORE_U32(amount, 0);
+    probe_.r3.u64 = item;
+    probe_.r4.u64 = index;
+    probe_.r5.u64 = kind;
+    probe_.r6.u64 = amount;
+    probe_.r7.u64 = 0;
+    Call(0x822FB8A0);
+    *attribute = PPC_LOAD_U32(kind);
+    const uint32_t bits = PPC_LOAD_U32(amount);
+    float number = 0;
+    std::memcpy(&number, &bits, sizeof(number));
+    *value = number;
+    return *attribute != 0;
+  }
+
   // An integer of a 2DA table: its id, the row, the column's hash.
   bool TwoDaInt(uint32_t table, uint32_t row, uint32_t column, int32_t* out) {
-    __imp__tu6_sub_826CB6A8(probe_, base);
-    __imp__tu6_sub_826CBB30(probe_, base);
-    if (!(probe_.r3.u32 & 0xFF)) {
-      return false;
-    }
-    const uint32_t holder = PPC_LOAD_U32(0x8324247Cu);
-    if (!Guest(holder) || !Guest(PPC_LOAD_U32(holder + 4))) {
-      return false;
-    }
-    probe_.r3.u64 = PPC_LOAD_U32(holder + 4);
-    probe_.r4.u64 = table;
-    __imp__tu6_sub_8262BFB0(probe_, base);
-    const uint32_t object = probe_.r3.u32;
-    if (!Guest(object)) {
+    const uint32_t object = TwoDaTable(table);
+    if (!object) {
       return false;
     }
     const uint32_t slot = area_ + 0x560;
@@ -896,6 +1126,31 @@ class TokenReader {
   }
 
  private:
+  // The table's object, or 0, once the game object says it is ready.
+  uint32_t TwoDaTable(uint32_t table) {
+    __imp__tu6_sub_826CB6A8(probe_, base);
+    __imp__tu6_sub_826CBB30(probe_, base);
+    if (!(probe_.r3.u32 & 0xFF)) {
+      return 0;
+    }
+    const uint32_t holder = PPC_LOAD_U32(0x8324247Cu);
+    if (!Guest(holder) || !Guest(PPC_LOAD_U32(holder + 4))) {
+      return 0;
+    }
+    probe_.r3.u64 = PPC_LOAD_U32(holder + 4);
+    probe_.r4.u64 = table;
+    __imp__tu6_sub_8262BFB0(probe_, base);
+    return Guest(probe_.r3.u32) ? probe_.r3.u32 : 0;
+  }
+
+  // A game function by its address, through the function table: no forwarder, so the
+  // game's code the player has made stays as it is.
+  void Call(uint32_t function) {
+    if (PPCFunc* host = PPC_LOOKUP_FUNC(base, function)) {
+      host(probe_, base);
+    }
+  }
+
   void Free(uint32_t string) {
     probe_.r3.u64 = string;
     probe_.r4.u64 = 1;
@@ -917,6 +1172,125 @@ class TokenReader {
   uint32_t area_ = 0;
 };
 
+// ---- an item's numbers, as the inventory's tooltip makes them ----
+//
+// inventory.gfx's ItemUtils: ItemStatsList, ItemPropertiesList and ItemRequirements, all
+// from the tables. Table 109 the stats, 107 the properties, 98 the attributes.
+constexpr uint32_t kStatShown = 2549727752u;     // 109: shown when not zero
+constexpr uint32_t kStatName = 846460685u;       // 109: the talk table's id
+constexpr uint32_t kStatDecimals = 434820324u;   // 109
+constexpr uint32_t kPropertyType = 1340467571u;  // 107: 1 and 2 are shown, 3 a requirement
+constexpr uint32_t kPropertyName = 2972972793u;  // 107: the talk table's id
+constexpr uint32_t kPropertyScale = 905976579u;  // 107: the column of the power's scale
+constexpr uint32_t kAttributeName = 0xAFEA8EFBu;  // 98: the talk table's id
+constexpr uint32_t kAttributeText = 0x1F872A59u;  // 98: its text, when it has no id
+constexpr const char* kPowerTag = "<powervalue/>";
+constexpr const char* kPercentTag = "<percent/>";
+
+std::string PowerText(std::string text, const std::string& value) {
+  const size_t place = text.find(kPowerTag);
+  if (place != std::string::npos) {
+    return text.replace(place, std::strlen(kPowerTag), value);
+  }
+  return text;
+}
+
+// The lines the game's tooltip has for `item_path`'s item: its stats, its properties and
+// what it asks of who uses it. One text, its line ends the snapshot's.
+std::string ItemDetails(TokenReader& reader, const std::string& item_path, uint32_t id) {
+  const uint32_t item = reader.ItemObject(id);
+  if (!item) {
+    return std::string();
+  }
+  const std::string line_end = [] {
+    std::string text;
+    AppendUtf8(text, kLineEnd);
+    return text;
+  }();
+  std::string details;
+  const auto add = [&](const std::string& line) {
+    if (!line.empty()) {
+      details += (details.empty() ? "" : line_end) + line;
+    }
+  };
+  // Stats: from row 1, each one not zero and with its column set.
+  const int stats = reader.TwoDaRows(109);
+  for (int row = 1; row < stats; ++row) {
+    const double value = reader.ItemStat(item, uint32_t(row));
+    double shown = 0, name = 0, decimals = 0;
+    if (value == 0 || !reader.TwoDaCell(109, uint32_t(row), kStatShown, &shown) || shown == 0 ||
+        !reader.TwoDaCell(109, uint32_t(row), kStatName, &name) || name <= 0) {
+      continue;
+    }
+    reader.TwoDaCell(109, uint32_t(row), kStatDecimals, &decimals);
+    std::string label;
+    if (!reader.TlkString(uint32_t(name), &label)) {
+      continue;
+    }
+    // As the game shows them: 8, 0.50, 1.25.
+    const std::string number = decimals > 0 && value != std::floor(value)
+                                   ? fmt::format("{:.{}f}", value, int(decimals))
+                                   : fmt::format("{}", int64_t(std::llround(value)));
+    const size_t percent = label.find(kPercentTag);
+    if (label.find(kPowerTag) != std::string::npos) {
+      add(PowerText(label, number));
+    } else if (percent != std::string::npos) {
+      add(label.replace(percent, std::strlen(kPercentTag), number) + "%");
+    } else {
+      add(label + ": " + number);
+    }
+  }
+  // Properties: an id and a power each, the power scaled by a column the row names.
+  const int properties = reader.Count(item_path + ".Properties");
+  for (int i = 0; i < properties && i < 32; ++i) {
+    std::string text;
+    if (!reader.Text(fmt::format("{}.Properties.{}", item_path, i), &text)) {
+      continue;
+    }
+    const uint32_t property = uint32_t(std::strtoul(text.c_str(), nullptr, 10));
+    int32_t type = 0, name = 0;
+    if (!reader.TwoDaInt(107, property, kPropertyType, &type) || (type != 1 && type != 2) ||
+        !reader.TwoDaInt(107, property, kPropertyName, &name) || name <= 0) {
+      continue;
+    }
+    double power = 0, scale = 0;
+    if (reader.Text(fmt::format("{}.PropertyPowers.{}", item_path, i), &text)) {
+      power = std::strtod(text.c_str(), nullptr);
+    }
+    if (reader.TwoDaText(107, property, kPropertyScale, &text) && !text.empty()) {
+      reader.TwoDaNumber(107, property, reader.ColumnHash(text), &scale);
+    }
+    std::string label;
+    if (reader.TlkString(uint32_t(name), &label)) {
+      add(PowerText(label, fmt::format("{:g}", power * scale)));
+    }
+  }
+  // What it requires.
+  std::string required;
+  const int requirements = reader.ItemRequirements(item);
+  for (int i = 0; i < requirements && i < 8; ++i) {
+    uint32_t attribute = 0;
+    double value = 0;
+    if (!reader.ItemRequirement(item, uint32_t(i), &attribute, &value)) {
+      continue;
+    }
+    std::string name;
+    int32_t strref = 0;
+    if (reader.TwoDaInt(98, attribute, kAttributeName, &strref) && strref > 0) {
+      reader.TlkString(uint32_t(strref), &name);
+    } else {
+      reader.TwoDaText(98, attribute, kAttributeText, &name);
+    }
+    if (!name.empty()) {
+      required += (required.empty() ? "" : ", ") + fmt::format("{} ", int64_t(value)) + name;
+    }
+  }
+  if (!required.empty()) {
+    add("Requires: " + required);
+  }
+  return details;
+}
+
 // ---- the deck's own reads: what the UI only pulls while its screens are open ----
 //
 // Patterns over the data model (session 37's dumps, runs 459-460): a segment is a name,
@@ -927,7 +1301,12 @@ class TokenReader {
 // and the game explores, fights, is in its menus or a conversation.
 constexpr auto kReadWindow = std::chrono::milliseconds(16);
 constexpr auto kReadBudget = std::chrono::microseconds(500);
-constexpr size_t kMembersLimit = 128;
+// A late game's completed quests and their subplots are the longest list.
+constexpr size_t kMembersLimit = 512;
+// What the deck has open: its long texts are read only then, each path a pattern of its
+// own - all of them in the snapshot would pass Binder's limit late in the game.
+constexpr size_t kWatchLimit = 64;
+constexpr auto kWatchPeriod = std::chrono::seconds(5);
 
 struct Segment {
   bool all = false;                // "*"
@@ -976,6 +1355,8 @@ std::vector<Segment> ParsePattern(const std::string& pattern) {
 
 struct Reads {
   std::vector<ReadJob> jobs;
+  // The jobs from here on are the deck's watches (SetWatches).
+  size_t fixed_jobs = 0;
   // The pass under way: its job, the paths still to visit (with the segment next), what
   // it has read.
   size_t current = SIZE_MAX;
@@ -998,14 +1379,19 @@ Reads& ReadState() {
          1000},
         {"Party.Members.*.Stats.{ClassName,RaceName}", 5000},
         {"Party.{InCamp,BackpackSize,BackpackMaxSize,MaxMembers}", 5000},
+        // Who the Items tab's buttons act for.
+        {"GUI.SelectedChar.{ID,Name,CanChangeEquipment}", 1000},
         // Items: what each wears and carries, and the purse.
         {"Party.Members.*.Equipment.*.{Name,Icon,StackSize,Description}", 5000},
         {"Party.Backpack.*.{Name,Icon,StackSize}", 5000},
         {"Party.Money.*", 5000},
         // Quests and the map: the journal's plots, the givers, the area's notes.
         {"Journal.{ActivePlot,ChanterBoard}", 5000},
+        {"Journal.PlotGroups.*.{ResRef,Name,Priority}", 5000},
         {"Journal.PlotList.*.*", 5000},
         {"Journal.PlotList.*.*.*.*", 5000},
+        // The completed quests' list, without their text: that is watched when opened.
+        {"Journal.CompletedPlots.*.{Name,ResRef,PlotGroup,ParentPlot,Completed,Updated}", 10000},
         {"Journal.PlotGivers.*.{PlaceableName,WorldPositionX,WorldPositionY}", 5000},
         {"MapNoteList.MapNotes.*.{MapNote,Name,WorldPositionX,WorldPositionY,Icon}", 5000},
         // The area: its name, its minimap's texture and where its edges are in the world
@@ -1016,7 +1402,7 @@ Reads& ReadState() {
         // The journal's conversations, the codex.
         {"Journal.Conversations.*.ConversationLines.*.*", 5000},
         {"Journal.CodexGroups.*.{Name,NumberUnlocked}", 20000},
-        {"Journal.CodexGroups.*.CodexList.*.{Name,Locked,Updated,Descriptions}", 20000},
+        {"Journal.CodexGroups.*.CodexList.*.{Name,Locked,Updated}", 20000},
         // Tactics: each member's slots.
         {"Party.Members.*.Tactics.{Enabled,PresetType}", 10000},
         {"Party.Members.*.Tactics.TacticsList.*.{Enabled,Condition,ConditionID,Command,"
@@ -1029,14 +1415,60 @@ Reads& ReadState() {
       job.period = std::chrono::milliseconds(p.period_ms);
       r->jobs.push_back(std::move(job));
     }
+    r->fixed_jobs = r->jobs.size();
     return r;
   }();
   return *reads;
 }
 
+// Under m.mutex: the watches as the deck last asked, the old ones' keys dropped.
+void TakeWatches(Mirror& m, Reads& r) {
+  std::string wanted;
+  {
+    std::lock_guard<std::mutex> lock(g_watch_mutex);
+    if (!g_watch_changed) {
+      return;
+    }
+    g_watch_changed = false;
+    wanted = g_watch_wanted;
+  }
+  if (r.current != SIZE_MAX && r.current >= r.fixed_jobs) {
+    r.current = SIZE_MAX;
+  }
+  for (size_t i = r.fixed_jobs; i < r.jobs.size(); ++i) {
+    for (const auto& [key, seen] : r.jobs[i].owned) {
+      // An item's name is both a watch's and the list's: the list keeps it.
+      bool listed = false;
+      for (size_t j = 0; j < r.fixed_jobs && !listed; ++j) {
+        listed = r.jobs[j].owned.count(key) != 0;
+      }
+      if (!listed) {
+        m.values.erase(key);
+        m.dirty = true;
+      }
+    }
+  }
+  r.jobs.resize(r.fixed_jobs);
+  size_t start = 0;
+  while (start < wanted.size() && r.jobs.size() - r.fixed_jobs < kWatchLimit) {
+    size_t end = wanted.find('\n', start);
+    if (end == std::string::npos) {
+      end = wanted.size();
+    }
+    if (end > start) {
+      ReadJob job;
+      job.segments = ParsePattern(wanted.substr(start, end - start));
+      job.period = kWatchPeriod;
+      r.jobs.push_back(std::move(job));
+    }
+    start = end + 1;
+  }
+}
+
 // Under m.mutex, on the game's thread: some of the deck's reads, within the budget.
 void ReadSome(Mirror& m, TokenReader& reader) {
   Reads& r = ReadState();
+  TakeWatches(m, r);
   const auto now = Clock::now();
   if (now - r.window_start > kReadWindow) {
     r.window_start = now;
@@ -1060,7 +1492,8 @@ void ReadSome(Mirror& m, TokenReader& reader) {
           ++logged;
         }
       }
-      for (size_t i = 0; i < switched_on; ++i) {
+      // Last first: what the deck has just opened goes before the rest.
+      for (size_t i = switched_on; i-- > 0;) {
         if (r.jobs[i].due <= now) {
           r.current = i;
           r.pending.clear();
@@ -1116,6 +1549,22 @@ void ReadSome(Mirror& m, TokenReader& reader) {
           std::string resolved;
           if (id && id < 0xFFFFFFFFul && reader.TlkString(uint32_t(id), &resolved)) {
             r.staged[path + "Text"] = resolved;
+          }
+        }
+        // An item the deck has open (only a watch reads an item's ID): its numbers.
+        if (leaf == "ID" && (path.rfind("Party.Backpack.", 0) == 0 ||
+                             path.find(".Equipment.") != std::string::npos)) {
+          const std::string item_path = path.substr(0, path.size() - 3);
+          const uint32_t id = uint32_t(std::strtoul(text.c_str(), nullptr, 10));
+          r.staged[item_path + ".Details"] = ItemDetails(reader, item_path, id);
+          // The buttons' question, for the character the game has selected.
+          std::string selected;
+          const uint32_t item = reader.ItemObject(id);
+          if (item && reader.Text("GUI.SelectedChar.ID", &selected)) {
+            r.staged[item_path + ".CanUse"] =
+                reader.CreatureCanUse(uint32_t(std::strtoul(selected.c_str(), nullptr, 10)), item)
+                    ? "1"
+                    : "0";
           }
         }
         // A tactic's condition, command and target: their names as the tactics screen

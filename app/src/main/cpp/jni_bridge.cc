@@ -235,6 +235,21 @@ jstring DeckQuickslot(JNIEnv* env, jclass, jint slot) {
   return env->NewStringUTF(warden::deck::QueueQuickslot(int(slot)).c_str());
 }
 
+// The Items tab's buttons - "" when queued, else why not.
+jstring DeckItem(JNIEnv* env, jclass, jint action, jint item, jint ability) {
+  return env->NewStringUTF(
+      warden::deck::QueueItemAction(int(action), int32_t(item), int32_t(ability)).c_str());
+}
+
+// What the deck has open: its read patterns, one a line.
+void DeckWatch(JNIEnv* env, jclass, jstring patterns) {
+  const char* text = patterns ? env->GetStringUTFChars(patterns, nullptr) : nullptr;
+  warden::deck::SetWatches(text ? text : "");
+  if (text) {
+    env->ReleaseStringUTFChars(patterns, text);
+  }
+}
+
 // {now ns, the game's swaps so far, presents so far, then the game's last frame
 // intervals in ns, oldest first}.
 jlongArray DeckFrames(JNIEnv* env, jclass) {
@@ -443,6 +458,8 @@ void AudioHeadphones(JNIEnv* env, jclass, jintArray ids) {
   warden::SetHeadphoneDevices(devices);
 }
 
+void AudioMediaVolume(JNIEnv*, jclass, jfloat gain) { warden::SetMediaVolume(float(gain)); }
+
 const JNINativeMethod kMethods[] = {
     {"startup", "(Ljava/lang/String;)Z", reinterpret_cast<void*>(Startup)},
     {"shutdown", "()V", reinterpret_cast<void*>(Shutdown)},
@@ -479,6 +496,8 @@ const JNINativeMethod kMethods[] = {
     {"deckSnapshot", "()Ljava/lang/String;", reinterpret_cast<void*>(DeckSnapshot)},
     {"deckFrames", "()[J", reinterpret_cast<void*>(DeckFrames)},
     {"deckQuickslot", "(I)Ljava/lang/String;", reinterpret_cast<void*>(DeckQuickslot)},
+    {"deckWatch", "(Ljava/lang/String;)V", reinterpret_cast<void*>(DeckWatch)},
+    {"deckItem", "(III)Ljava/lang/String;", reinterpret_cast<void*>(DeckItem)},
     {"deckRender", "()Ljava/lang/String;", reinterpret_cast<void*>(DeckRender)},
     {"touchPad", "(ZIFFFFFF)V", reinterpret_cast<void*>(TouchPad)},
     {"photoToggle", "()V", reinterpret_cast<void*>(PhotoToggle)},
@@ -498,6 +517,7 @@ const JNINativeMethod kMethods[] = {
     {"exitRequest", "()Ljava/lang/String;", reinterpret_cast<void*>(ExitRequest)},
     {"requestQuit", "(Ljava/lang/String;)V", reinterpret_cast<void*>(RequestQuit)},
     {"audioHeadphones", "([I)V", reinterpret_cast<void*>(AudioHeadphones)},
+    {"audioMediaVolume", "(F)V", reinterpret_cast<void*>(AudioMediaVolume)},
 };
 
 }  // namespace

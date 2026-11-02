@@ -211,6 +211,19 @@ final class NativeBridge {
     static native String deckQuickslot(int slot);
 
     /**
+     * What the deck has open: read patterns, one a line. Their long texts join the snapshot
+     * while they are asked for (warden_deck.h).
+     */
+    static native void deckWatch(String patterns);
+
+    /**
+     * The Items tab's buttons, for the character the game has selected: DeckSource's
+     * ITEM_EQUIP, ITEM_USE (its `ability`) or ITEM_UNEQUIP on `item`. Returns "" when queued,
+     * else why not.
+     */
+    static native String deckItem(int action, int item, int ability);
+
+    /**
      * The deck's faces: each party slot's face generation (0 none yet), changed when the
      * game redraws that portrait (read back from the GPU while the deck pulls).
      */
@@ -323,4 +336,7 @@ final class NativeBridge {
      * speakers' mixdown.
      */
     static native void audioHeadphones(int[] deviceIds);
+
+    /** BUG-109: Android's media volume as a linear gain, applied to the game's sound. */
+    static native void audioMediaVolume(float gain);
 }

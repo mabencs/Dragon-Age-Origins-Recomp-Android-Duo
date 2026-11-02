@@ -44,6 +44,9 @@ public final class GameActivity extends Activity {
 
     private static final String TAG = "Warden";
 
+    /** Resumed: DeckService's answer to the deck, which never pulls the game over Home. */
+    static volatile boolean inFront;
+
     private GameSurfaceView surfaceView;
     /** PLAN 11.1: Debugging Mode on for this run (Options, from the start). */
     private boolean debugMode;
@@ -246,14 +249,28 @@ public final class GameActivity extends Activity {
                 @Override
                 public void onAudioDevicesAdded(AudioDeviceInfo[] added) {
                     reportHeadphones();
+                    reportMediaVolume();
                 }
 
                 @Override
                 public void onAudioDevicesRemoved(AudioDeviceInfo[] removed) {
                     reportHeadphones();
+                    reportMediaVolume();
                 }
             };
             audioManager.registerAudioDeviceCallback(audioDevices, handler);
+            if (followsMediaVolumeItself()) {
+                mediaVolume = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        reportMediaVolume();
+                    }
+                };
+                IntentFilter filter = new IntentFilter("android.media.VOLUME_CHANGED_ACTION");
+                filter.addAction("android.media.STREAM_MUTE_CHANGED_ACTION");
+                registerReceiver(mediaVolume, filter, Context.RECEIVER_NOT_EXPORTED);
+                reportMediaVolume();
+            }
         }
 
         padReportHeader = text.append('\n').toString();
@@ -343,6 +360,8 @@ public final class GameActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        inFront = true;
+        reportMediaVolume();
         goFullscreen();
         if (runtimeStarted) {
             NativeBridge.setPaused(false);
@@ -375,6 +394,7 @@ public final class GameActivity extends Activity {
 
     @Override
     protected void onPause() {
+        inFront = false;
         if (runtimeStarted) {
             NativeBridge.setPaused(true);
         }
@@ -524,6 +544,10 @@ public final class GameActivity extends Activity {
             audioManager.unregisterAudioDeviceCallback(audioDevices);
             audioDevices = null;
         }
+        if (mediaVolume != null) {
+            unregisterReceiver(mediaVolume);
+            mediaVolume = null;
+        }
         if (guestBooted) {
             // The title's threads are still running in guest memory that shutdown()
             // would free under them, so the process ends here instead; the system
@@ -599,6 +623,52 @@ public final class GameActivity extends Activity {
         }
         Log.i(TAG, "audio: headphones:" + (count == 0 ? " none" : names.toString()));
         NativeBridge.audioHeadphones(java.util.Arrays.copyOf(ids, count));
+    }
+
+    /**
+     * BUG-109: on the AYN Thor the media volume does not reach this track: the mixer's stream
+     * volume moves and the track's final gain does not, for usage game and media alike. So
+     * the sound takes the volume here, on those devices only - anywhere Android applies it,
+     * it would be applied twice. Run 613: from index 15 to 8 the output drops 13 dB, this
+     * gain alone; 26 would be both.
+     */
+    private static boolean followsMediaVolumeItself() {
+        return "AYN".equalsIgnoreCase(android.os.Build.MANUFACTURER);
+    }
+
+    private BroadcastReceiver mediaVolume;
+
+    /**
+     * The media volume to the native side, by Android's own curve for the output in use. Not
+     * over Bluetooth: there the headset takes the volume itself.
+     */
+    private void reportMediaVolume() {
+        if (audioManager == null || !followsMediaVolumeItself()) {
+            return;
+        }
+        int deviceType = AudioDeviceInfo.TYPE_BUILTIN_SPEAKER;
+        for (AudioDeviceInfo device : audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            switch (device.getType()) {
+                case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP:
+                case AudioDeviceInfo.TYPE_BLE_HEADSET:
+                    NativeBridge.audioMediaVolume(1f);
+                    return;
+                case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
+                case AudioDeviceInfo.TYPE_WIRED_HEADSET:
+                case AudioDeviceInfo.TYPE_USB_HEADSET:
+                    deviceType = device.getType();
+                    break;
+                default:
+                    break;
+            }
+        }
+        int index = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        float gain = 0f;
+        if (index > 0 && !audioManager.isStreamMute(AudioManager.STREAM_MUSIC)) {
+            float db = audioManager.getStreamVolumeDb(AudioManager.STREAM_MUSIC, index, deviceType);
+            gain = (float) Math.pow(10.0, db / 20.0);
+        }
+        NativeBridge.audioMediaVolume(gain);
     }
 
     // ---- the options panel (PLAN 10.1) ----

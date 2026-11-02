@@ -302,6 +302,11 @@ warden::audio::Mixer g_mixer;
 bool g_mixed_for_headphones = false;
 // Options -> Volume boost: the gain (linear; 1 = off) and its limiter, after the mix.
 warden::audio::Boost g_boost;
+
+// BUG-109: Android's media volume where the device does not apply it to this track
+// (SetMediaVolume); the second is the mixing thread's, where the last frame ended.
+std::atomic<float> g_media_gain{1.0f};
+float g_media_gain_applied = 1.0f;
 std::atomic<uint64_t> g_mix_nanos{0};   // spent making frames into stereo
 std::atomic<uint64_t> g_mix_frames{0};
 
@@ -334,6 +339,19 @@ void QueueFrame(const uint8_t* base, uint32_t samples) {
   g_mixed_for_headphones = headphones;
   g_boost.Process(frame.samples, kFrameChannelSamples,
                   g_boost_gain.load(std::memory_order_relaxed));
+  // BUG-109: the media volume, last as Android's own would be - across the frame, so that a
+  // step does not click.
+  const float media_gain = g_media_gain.load(std::memory_order_relaxed);
+  if (media_gain != g_media_gain_applied || media_gain != 1.0f) {
+    const float step = (media_gain - g_media_gain_applied) / float(kFrameChannelSamples);
+    float gain = g_media_gain_applied;
+    for (uint32_t i = 0; i < kFrameChannelSamples; ++i) {
+      gain += step;
+      frame.samples[2 * i] *= gain;
+      frame.samples[2 * i + 1] *= gain;
+    }
+    g_media_gain_applied = media_gain;
+  }
   float out_peak = 0.0f;
   for (uint32_t i = 0; i < 2 * kFrameChannelSamples; ++i) {
     out_peak = std::fmax(out_peak, std::fabs(frame.samples[i]));
@@ -667,6 +685,13 @@ void SetHeadphoneDevices(const std::vector<int32_t>& device_ids) {
   std::lock_guard<std::mutex> lock(g_route_mutex);
   g_headphone_devices = device_ids;
   UpdateRouteLocked(false);
+}
+
+void SetMediaVolume(float gain) {
+  const float clamped = std::fmin(std::fmax(gain, 0.0f), 1.0f);
+  if (g_media_gain.exchange(clamped, std::memory_order_relaxed) != clamped) {
+    XELOGI("XAudio output: media volume, gain {:.4f}", clamped);
+  }
 }
 
 void SetVolumeBoost(const std::string& value) { ApplyVolumeBoost(value); }

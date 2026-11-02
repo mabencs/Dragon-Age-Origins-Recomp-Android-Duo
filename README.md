@@ -353,12 +353,15 @@ the game. Tap the tabs along the top.
 |---|---|
 | **Party** | Each member's portrait, name, class, health, and mana or stamina, with level-up, poison and paralysis marked. |
 | **Quickbar** | The selected character's quick slots, large enough for a thumb. A tap uses the slot, as its button would (in exploration and combat). |
-| **Quests** | The journal's quests and their objectives, the followed quest first. |
+| **Quests** | The journal's two pages, current and completed quests, in the game's groups. A tap unfolds a group, and a quest for its text. |
 | **Map** | The area: the party, quest givers and the area's notes, north up. |
 | **Tactics** | Each member's tactics slots: condition, command and target. |
-| **Codex** | The codex entries you have found (tap to read), and the journal's conversations. |
-| **Items** | What each member wears, the backpack, and the purse. |
+| **Codex** | The codex entries you have found, by category: a tap unfolds a category, and an entry to read it. The journal's conversations below. |
+| **Items** | What each member wears, the backpack, and the purse. A tap shows an item's stats, properties, requirements and text. **Equip**, **Use** and **Unequip** act for the character selected in the game (in exploration and combat). |
 | **Perf** | With *Performance tab/overlay* on: frames a second, frame times, the 1% low, power, battery and the GPU. |
+
+On AYN devices the game's sound follows the media volume through the app itself, because
+the firmware does not apply it to the game's sound; Volume boost is applied first.
 
 The deck runs in its own process, so a fault in it never stops the game. It leaves the second
 screen when you put the game away, and comes back with it.

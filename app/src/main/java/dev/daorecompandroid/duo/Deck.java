@@ -109,12 +109,17 @@ final class Deck {
             String why = source.quickslot(slot);
             ui.post(() -> view.quickslotAnswer(slot, why));
         }));
+        view.setItems((action, item, ability) -> pull.post(() -> {
+            String why = source.item(action, item, ability);
+            ui.post(() -> view.itemAnswer(why));
+        }));
         pull.post(new Runnable() {
             @Override
             public void run() {
                 if (presentation == null) {
                     return;
                 }
+                source.watch(view.watches());
                 final Map<String, String> values = DeckSource.parse(source.snapshot());
                 final long[] frames = source.frames();
                 final boolean perf = "on".equals(

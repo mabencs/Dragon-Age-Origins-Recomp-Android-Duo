@@ -32,6 +32,15 @@ public final class DeckService extends Service {
     static final int PORTRAITS = IBinder.FIRST_CALL_TRANSACTION + 3;
     /** An int, the party slot: its face, 146x146 RGBA (byte[], or null). */
     static final int PORTRAIT = IBinder.FIRST_CALL_TRANSACTION + 4;
+    /** A string, what the deck has open: read patterns, one a line (warden_deck.h). */
+    static final int WATCH = IBinder.FIRST_CALL_TRANSACTION + 5;
+    /** Whether the game's activity is in front: an int, 1 if it is. */
+    static final int GAME_IN_FRONT = IBinder.FIRST_CALL_TRANSACTION + 6;
+    /**
+     * The Items tab's buttons: three ints - the action (DeckSource.ITEM_*), the item, its
+     * ability; answers "" when the game will do it, else why not.
+     */
+    static final int ITEM = IBinder.FIRST_CALL_TRANSACTION + 7;
 
     private final Binder binder = new Binder() {
         @Override
@@ -53,6 +62,18 @@ public final class DeckService extends Service {
                 case PORTRAIT:
                     reply.writeByteArray(NativeBridge.deckPortrait(data.readInt()));
                     return true;
+                case WATCH:
+                    NativeBridge.deckWatch(data.readString());
+                    return true;
+                case GAME_IN_FRONT:
+                    reply.writeInt(GameActivity.inFront ? 1 : 0);
+                    return true;
+                case ITEM: {
+                    int action = data.readInt();
+                    int item = data.readInt();
+                    reply.writeString(NativeBridge.deckItem(action, item, data.readInt()));
+                    return true;
+                }
                 default:
                     return super.onTransact(code, data, reply, flags);
             }

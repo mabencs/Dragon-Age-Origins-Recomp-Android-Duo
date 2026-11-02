@@ -30,6 +30,23 @@ interface DeckSource {
     /** A party slot's face, 146x146 RGBA premultiplied, or null. */
     byte[] portrait(int slot);
 
+    /** What the deck has open: read patterns, one a line (DeckView.watches). */
+    void watch(String patterns);
+
+    /**
+     * The Items tab's buttons: an ITEM_ action on `item` (its `ability`, to use it). Returns
+     * "" when the game will do it, else why not. Never on the UI thread.
+     */
+    String item(int action, int item, int ability);
+
+    /** warden_deck.h's kItemEquip, kItemUse, kItemUnequip. */
+    int ITEM_EQUIP = 0;
+    int ITEM_USE = 1;
+    int ITEM_UNEQUIP = 2;
+
+    /** What stands for a line end inside a value (warden_deck.cc's kLineEnd). */
+    char LINE_END = '';
+
     /** The snapshot's lines as a map. */
     static Map<String, String> parse(String snapshot) {
         Map<String, String> values = new HashMap<>();
@@ -44,7 +61,8 @@ interface DeckSource {
             }
             int tab = snapshot.indexOf('\t', start);
             if (tab > start && tab < end) {
-                values.put(snapshot.substring(start, tab), snapshot.substring(tab + 1, end));
+                values.put(snapshot.substring(start, tab),
+                        snapshot.substring(tab + 1, end).replace(LINE_END, '\n'));
             }
             start = end + 1;
         }
@@ -76,6 +94,16 @@ interface DeckSource {
         @Override
         public byte[] portrait(int slot) {
             return NativeBridge.deckPortrait(slot);
+        }
+
+        @Override
+        public void watch(String patterns) {
+            NativeBridge.deckWatch(patterns);
+        }
+
+        @Override
+        public String item(int action, int item, int ability) {
+            return NativeBridge.deckItem(action, item, ability);
         }
     }
 }

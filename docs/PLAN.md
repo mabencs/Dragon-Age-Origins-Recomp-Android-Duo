@@ -1540,6 +1540,51 @@ Depends on Phase 6. Full design in [`SECOND-SCREEN.md`](SECOND-SCREEN.md).
       14.7, Lossless 2x balanced, FSR 3.1 Performance, 960x540 to 1920x1080; the option
       off, the tab gone and the deck on Party. Runs 547 and 549: the overlay with the
       second screen off, gone at once with the option off.
+- [x] 8.11 **The Quests and Codex tabs fold as the journal does (the owner asked,
+      2026-11-02; session 42, runs 602-603).** Quests has the journal's two pages, Current
+      Quests (`Journal.PlotList`) and Completed Quests (`Journal.CompletedPlots`), each
+      its `Journal.PlotGroups` by descending Priority, a group its plots with no
+      `ParentPlot`; a subplot's text goes under its quest's, to two levels (journal.gfx's
+      QuestList, QuestGroup, AddSubplotDescriptions; BUG-107). Codex has its categories.
+      A tap unfolds a category or an entry; any number stay open (the journal keeps one
+      group), and what is unfolded is kept from one start to the next (shared preferences
+      `deck-folds`). A • on an entry and its category marks what the game calls unread;
+      the deck never clears it. **The long texts are read while open:** `DeckSource.watch`
+      (`DeckService.WATCH`, `warden::deck::SetWatches`) gives the game the open items as
+      read patterns, each a job of its own, first in line and read every 5 s: a codex
+      entry's `Descriptions.*`, a completed quest's `Description`, an item's `*`. All of
+      them at once would pass Binder's limit late in the game (BUG-105). Run 602: the
+      owner's journal and the tab alike, two groups, four quests. Run 603: The Korcari
+      Wilds readable on a new character that had never opened the journal, the • still
+      there. **Not seen yet:** a completed quest, as neither save has one.
+- [x] 8.12 **The Items tab's details, Equip, Use and Unequip (the owner asked, 2026-11-02;
+      session 42, runs 602, 608-610).** A tap on any item shows what the game's Inspect
+      does: its stats, properties and requirement, then its text (`warden_deck.cc`'s
+      `ItemDetails`, inventory.gfx's ItemStatsList, ItemPropertiesList and
+      GetItemRequirements). The DA-only handlers are registered in `tu6_sub_82439B08`
+      (found by the names in the image; `build/xex-check/image.bin` is the image from
+      0x82000000): `GetItemStat` is `sub_82285ED0(id)` then `sub_822FB5D8(item, row)`, and
+      `CreatureCanUseItem` is `sub_823C1898(creature, item)`. They are called through
+      `PPC_LOOKUP_FUNC`, so no forwarder and the game's code stands. Table 109 is read by the
+      row's place (vtable +24 a column's place from its hash, +84 the type, +56/+52/+60 the
+      cell), 107 and 98 by row id. A backpack item with `EquippableSlots` has **Equip on
+      <the selected character>**; one with neither slots nor an invalid `AbilityID` (0, or
+      200000, ItemUtils.ITEM_ABILITY_INVALID) **Use on** them; what the character cannot use
+      is greyed, as the game greys it. A worn item of the selected character has **Unequip
+      from** them, unless `Irremovable`; another character's says to select them. These are
+      the inventory screen's own messages, through the engine's SendMessage from the mode
+      controller's update (`warden::QueueEngineMessage`): `GUI.SelectedChar.EquipItem <item>
+      255` (255: the game's choice of slot), `GUI.SelectedChar.UnequipItem <item>` and
+      `GameModeController.PerformAbility <ability> <GUI.SelectedChar.ID> <item>`. Only while
+      the engine explores or fights, as 8.8. Run 602: the Mace in the Maul's place, the
+      poultices 4 to 3. Runs 609-610 against the game's Inspect: the Maul (Damage 8, Critical
+      chance 0.50%, Armor penetration 7, Strength modifier 1.25, Requires: 18 strength), the
+      Dwarven Noble Armor, Blood Dragon Plate (Armor 18.38, Fatigue 26.25%, +3 strength, +3
+      willpower, +3 armor, +50 health, -10% fatigue, Requires: 38 strength, Equip greyed);
+      Unequip left both weapon slots empty in the game's own inventory, and was refused in a
+      conversation. **Limits:** a trap's Use is sent and does nothing, as it wants a place on
+      the ground; not on the deck: Inspect's first lines (the item's kind, its material and
+      tier), its colours, and rune slots; the buttons act only for the selected character.
 
 ---
 

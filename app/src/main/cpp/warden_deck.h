@@ -10,6 +10,9 @@
 namespace warden {
 // The engine's game mode (warden_game.cc): 0 explore, 1 combat, 3 menu, 4 conversation ...
 int32_t GameMode();
+// A message for the engine, as the UI's ExternalCommands.SendMessage sends one ("name arg
+// arg"): sent from the mode controller's next update (warden_game.cc).
+void QueueEngineMessage(const std::string& text);
 }  // namespace warden
 
 namespace warden::deck {
@@ -39,6 +42,21 @@ void NotePresent();
 // while the game explores or fights (the mirror's own GameModeController.CurrentGameMode),
 // so a tap never lands in a menu or a conversation. Returns "" when queued, else why not.
 std::string QueueQuickslot(int slot);
+
+// The Items tab's buttons, the inventory screen's own commands for the character the game
+// has selected: equip item `item` (GUI.SelectedChar.EquipItem, the game choosing the slot),
+// use it (GameModeController.PerformAbility, its `ability`) or take it off
+// (GUI.SelectedChar.UnequipItem). Only while the game explores or fights. Returns "" when
+// queued, else why not.
+constexpr int kItemEquip = 0;
+constexpr int kItemUse = 1;
+constexpr int kItemUnequip = 2;
+std::string QueueItemAction(int action, int32_t item, int32_t ability);
+
+// What the deck has open, one read pattern a line: its long texts (a codex entry's pages,
+// a completed quest's description) are in the snapshot only while they are asked for, so
+// that a late game's texts stay under Binder's limit. Replaces the last list.
+void SetWatches(const std::string& patterns);
 
 // Called from XamInputGetState for the first pad: ORs in the queued press while it lasts.
 // Returns true while a quick-slot press is being held (the pad then counts as connected).
