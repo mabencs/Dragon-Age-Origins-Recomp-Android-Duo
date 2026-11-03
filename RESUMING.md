@@ -124,7 +124,12 @@ story is `docs/BUGS.md`; the reasoning for each change is in its commit message.
   dev.daorecompandroid.duo ...`) the installed DLC, the options, and **the saves**
   (`content/00000001/`). **Never uninstall the app** (`adb uninstall`, or uninstalling
   from the launcher): that deletes all of it, and re-extraction takes the disc image, the
-  file picker and about eight minutes. Install updates with `adb install -r -d`.
+  file picker and about eight minutes. Install updates with `adb install -r -d`. On the
+  home screen it is **DAO Debug**.
+- Beside it is the **published app** (`prod.daorecompandroid.duo`, from the Releases page),
+  where the owner plays their own game; it updates itself from its launcher. Development,
+  tests and the scripts use the debug app only: never install over, stop or touch the
+  published one or its saves.
 - **The debug signing key is shared and committed** (`app/debug.keystore`, password
   `android`). An APK signed with any other key fails to install over the one on the
   Thor with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` - and the only device-side fix is the

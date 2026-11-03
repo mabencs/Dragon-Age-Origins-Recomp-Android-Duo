@@ -38,7 +38,8 @@ the header of [`STATUS.md`](STATUS.md) (**Next action**). A new machine is set u
 - **Never uninstall the app on the Thor** (`dev.daorecompandroid.duo`) - it deletes the
   6.4 GiB extracted game data and the saves. Install with `adb install -r -d`; a
   signing-key mismatch is fixed on the computer (`docs/SIGNING.md`), never by
-  uninstalling.
+  uninstalling. The published app beside it (`prod.daorecompandroid.duo`) is the owner's
+  own play: leave it, its data and its saves alone.
 - **On the owner's PC, check for a running game before any build** - Gradle,
   `bootstrap.py`, `recompile.py`, DAORecomp's installer - and ask before building if one
   is running. A launcher open with nothing launched is not a game.

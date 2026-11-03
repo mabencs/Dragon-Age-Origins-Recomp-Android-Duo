@@ -128,6 +128,9 @@ android {
             // The owner's own build: debug-signed, run-as works (tools/route.sh and the
             // test files), and it installs over the Thor's copy.
             versionNameSuffix = "-debug"
+            // Its own name on the home screen: the owner plays on the published app and
+            // fixes bugs on this one, side by side.
+            manifestPlaceholders["appLabel"] = "DAO Debug"
         }
         release {
             isMinifyEnabled = false

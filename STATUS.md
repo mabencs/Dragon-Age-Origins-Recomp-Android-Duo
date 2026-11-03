@@ -1867,6 +1867,13 @@ Then continue from **Next action** at the top of this file.
 
 Newest first. One short entry per session: what changed, what's next.
 
+### 2026-11-03 (session 42, later) - two apps on the Thor
+
+- The published 0.1.2-alpha is installed on the Thor beside the debug app: the owner plays on
+  it, and the debug app is for fixing bugs. The debug build is now named **DAO Debug** on the
+  home screen (`app/build.gradle.kts`), so the two can be told apart. Scripts and tests touch
+  the debug app only.
+
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 
 - **PLAN 13.1 (DECISIONS D15, the owner's decision):** the launcher checks GitHub at each start
