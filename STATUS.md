@@ -1944,7 +1944,10 @@ Newest first. One short entry per session: what changed, what's next.
 - **PLAN 9.22 (tested, not built):** 4:3 screens. Told a 4:3 mode, the game draws at 4:3 and lays
   out its HUD, menus and conversations inside the 4:3 frame (runs 692-694, 960x720 and 1280x960,
   both in the EDRAM in one tile; 62-64 and about 44 fps at the camp on the Thor). The test
-  switches `files/hack-video-mode WxH 4:3` and `files/resolution 960x720|1280x960` are kept.
+  switches `files/hack-video-mode WxH 4:3` and `files/resolution 960x720|1280x960` are kept. Then
+  **built** (the owner asked): Options -> Aspect ratio (16:9 default, 4:3) above Rendering
+  resolution, which offers only the aspect's sizes; FSR 3.1's 4:3 profiles to the largest 4:3
+  area; frame generation at 4:3 (runs 695-696). Not checked on a real 4:3 screen.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

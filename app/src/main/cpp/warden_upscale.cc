@@ -80,6 +80,10 @@ extern "C" VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
 extern "C" VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device,
                                                                        const char* name);
 
+namespace warden {
+bool VideoFourByThree();  // warden_video.cc: Aspect ratio 4:3 (PLAN 9.22)
+}  // namespace warden
+
 namespace xe {
 namespace gpu {
 
@@ -1889,12 +1893,15 @@ void WardenUpscaler::Impl::GetDisplaySize(uint32_t render_width, uint32_t render
   if (!surface_width || !surface_height) {
     return;
   }
-  // The largest area with the game's 16:9 that the panel shows: 1920x1080 on the Thor.
+  // The largest area with the game's 16:9 that the panel shows: 1920x1080 on the Thor -
+  // or its 4:3 (PLAN 9.22, Aspect ratio): 1440x1080 there, 1280x960 on such a screen.
+  const uint32_t across = warden::VideoFourByThree() ? 4 : 16;
+  const uint32_t down = warden::VideoFourByThree() ? 3 : 9;
   uint32_t width = surface_width;
-  uint32_t height = uint32_t(uint64_t(width) * 9 / 16);
+  uint32_t height = uint32_t(uint64_t(width) * down / across);
   if (height > surface_height) {
     height = surface_height;
-    width = uint32_t(uint64_t(height) * 16 / 9);
+    width = uint32_t(uint64_t(height) * across / down);
   }
   // No downscaling: below the render size the upscaler would only anti-alias.
   if (width > render_width && height > render_height) {

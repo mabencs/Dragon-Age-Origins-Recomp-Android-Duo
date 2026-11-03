@@ -84,6 +84,19 @@ final class Options {
                     "AMD FidelityFX Super Resolution 1: the sharpest, a little GPU.",
                     "AMD FidelityFX CAS: stretched and sharpened.",
                 }),
+        // PLAN 9.22 (the owner, 2026-11-03): the picture's shape. 4:3 tells the game it is on
+        // a 4:3 screen - it has a true 4:3 mode, the camera and its HUD laid out for it (runs
+        // 692-694) - and shows it at 4:3; Rendering resolution then offers 4:3 sizes, FSR
+        // 3.1 its 4:3 profiles (warden_video.cc, warden_fsr3.cc). From the next start.
+        new Option("aspect", "Aspect ratio", "16:9", false,
+                new String[] {"16:9", "4:3"},
+                new String[] {"16:9", "4:3"},
+                new String[] {
+                    "Widescreen, the game's usual picture - the Thor's screen shape.",
+                    "The game's own 4:3 picture and HUD, for 4:3 screens such as 1280x960"
+                            + " handhelds; on a widescreen panel it shows with bars at the"
+                            + " sides. Field of view's degrees stay those of the 16:9 width.",
+                }),
         // PLAN 9.16 (the owner, 2026-11-01): the size the game renders at without FSR 3.1,
         // from the next start, Upscaling filling the panel. Up to 1360x768 the game's device
         // is made at the size (warden_fsr3.cc's RenderSize); above it the game's own layout
@@ -92,11 +105,13 @@ final class Options {
         // (RenderScale) - the pixels are the full size's. 1280x720, the game's own, stays
         // the default (the owner's rule: fidelity trades are options); the larger sizes
         // are for devices with more GPU than the Thor (the owner, 2026-11-01).
+        // PLAN 9.22: the 4:3 sizes after the 16:9 ones, each list offered with its aspect
+        // (allowed); 1440x1080 the device at 720x540 at twice it, as 1080p.
         new Option("resolution", "Rendering resolution", "1280x720", false,
                 new String[] {"960x540", "1280x720", "1360x768", "1600x900", "1920x1080",
-                    "2560x1440"},
+                    "2560x1440", "640x480", "960x720", "1280x960", "1440x1080"},
                 new String[] {"960x540", "1280x720", "1360x768", "1600x900", "1920x1080",
-                    "2560x1440"},
+                    "2560x1440", "640x480", "960x720", "1280x960", "1440x1080"},
                 new String[] {
                     "Rendered at 960x540 and scaled to the panel: the fastest, the softest"
                             + " (the King's Camp uncapped: 58.5 fps).",
@@ -108,6 +123,13 @@ final class Options {
                             + " shows (the King's Camp on the Thor: 23.6 fps).",
                     "Rendered at 2560x1440 and scaled down to the panel: for faster devices"
                             + " (the King's Camp on the Thor: 15.1 fps).",
+                    "4:3 at 640x480, the 360's own standard definition: the fastest, the"
+                            + " softest.",
+                    "4:3 at 960x720, the game's usual height (the King's Camp on the Thor:"
+                            + " about 62 fps, FSR 3.1 off).",
+                    "4:3 at 1280x960, a 1280x960 screen's own size: the sharpest there (the"
+                            + " King's Camp on the Thor: about 44 fps).",
+                    "4:3 at 1440x1080, scaled to the panel: for faster devices.",
                 }),
         // PLAN 9.17 (the owner picked it, 2026-11-01): the field of view, DAORecomp's way
         // (warden_camera_fov.cc) - the camera's angle scaled, the picture's proportions
@@ -522,7 +544,34 @@ final class Options {
     }
 
     /** The option's file, or its default when there is none or it says something else. */
+    /** PLAN 9.22: Rendering resolution's sizes, by aspect. */
+    private static final java.util.Set<String> FOUR_BY_THREE = new java.util.HashSet<>(
+            java.util.Arrays.asList("640x480", "960x720", "1280x960", "1440x1080"));
+
+    /** PLAN 9.22: whether the value is offered - Rendering resolution only its aspect's sizes. */
+    static boolean allowed(File dir, Option option, String value) {
+        if (!option.file.equals("resolution")) {
+            return true;
+        }
+        return FOUR_BY_THREE.contains(value) == "4:3".equals(read(dir, byFile("aspect")));
+    }
+
+    /** PLAN 9.22: Rendering resolution's default for the aspect chosen. */
+    static String resolutionDefault(File dir) {
+        return "4:3".equals(read(dir, byFile("aspect"))) ? "960x720" : "1280x720";
+    }
+
     static String read(File dir, Option option) {
+        if (option.file.equals("resolution")) {
+            String value = readKnown(dir, option);
+            return value != null && allowed(dir, option, value) ? value : resolutionDefault(dir);
+        }
+        String value = readKnown(dir, option);
+        return value != null ? value : option.defaultValue;
+    }
+
+    /** The file's value if it is one of the option's, else null. */
+    private static String readKnown(File dir, Option option) {
         File file = new File(dir, option.file);
         try (BufferedReader in = new BufferedReader(new FileReader(file))) {
             String line = in.readLine();
@@ -535,7 +584,7 @@ final class Options {
         } catch (IOException e) {
             // None yet: the default.
         }
-        return option.defaultValue;
+        return null;
     }
 
     static boolean write(File dir, Option option, String value) {

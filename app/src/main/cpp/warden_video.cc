@@ -83,6 +83,18 @@ const VideoSize& DisplaySize() {
       std::fclose(file);
       XELOGW("video mode: the title is told {}x{}{} (files/hack-video-mode)", told.width,
              told.height, told.four_by_three ? ", 4:3, not widescreen" : "");
+    } else if (FILE* aspect = dir ? std::fopen((std::string(dir) + "/aspect").c_str(), "r")
+                                  : nullptr) {
+      // PLAN 9.22: Options -> Aspect ratio 4:3 - a 4:3 mode at 720 lines, HD; the device's
+      // own size is the Rendering resolution's (warden_fsr3.cc).
+      char word[8] = {};
+      if (std::fscanf(aspect, "%7s", word) == 1 && std::strcmp(word, "4:3") == 0) {
+        told.width = 960;
+        told.height = 720;
+        told.four_by_three = true;
+        XELOGI("video mode: 4:3 - the title is told 960x720, not widescreen (Aspect ratio)");
+      }
+      std::fclose(aspect);
     }
     return told;
   }();

@@ -2660,8 +2660,9 @@ behind the owner's (CLAUDE.md).
       format and size), so it switches at once and works with FSR 3.1 on or off. Run 678
       (off from the start): the corners as bright as the rest; run 679 (on): the vignette.
       With the vignette off, BUG-113's shade has nothing to find in the corners.
-- [ ] 9.22 **4:3 screens (the owner asked, 2026-11-03: the Retroid Pocket Nova's 1280x960 and
-      the like) - tested, not built (session 43, runs 692-694).** Today a 4:3 screen shows the
+- [x] 9.22 **4:3 screens (the owner asked, 2026-11-03: the Retroid Pocket Nova's 1280x960 and
+      the like) - tested (runs 692-694), then built (runs 695-696); Mali GPUs not considered
+      (the owner).** Today a 4:3 screen shows the
       16:9 picture letterboxed (Xenia's presenter keeps the guest's aspect). **The game has a
       true 4:3 mode:** told a mode that is not widescreen (`files/hack-video-mode` holding
       `960x720 4:3` or `1280x960 4:3`: X_VIDEO_MODE's widescreen 0 and flag 3, VdQueryVideoFlags
@@ -2678,8 +2679,23 @@ behind the owner's (CLAUDE.md).
       shape (not a test file), 4:3 Rendering resolutions (and 1440x1080 by 2x scaling, as 1080p),
       FSR 3.1's profiles at 4:3 sizes (80-pixel tile widths), the field of view's 16:9 basis
       checked, the launcher, options panel and on-screen controller on a 4:3 screen; frame
-      generation follows the guest output's size. The RG477M (Dimensity 8300, Mali) is a separate
-      question - the port has run only on Adreno.
+      generation follows the guest output's size. **Built:** Options -> **Aspect ratio** (`files/
+      aspect`: 16:9, the default, or 4:3; from the next start) above Rendering resolution, which
+      offers only the aspect's sizes - 16:9's six, or 640x480, 960x720 (4:3's default), 1280x960
+      and 1440x1080 (the device at 720x540 at twice it, as 1080p) - and takes the new aspect's
+      default when the aspect changes (`Options.allowed`, `resolutionDefault`; the panel steps
+      past the other aspect's sizes). At 4:3 the title is told 960x720, not widescreen; the
+      presenter shows 4:3; FSR 3.1's profiles render at Quality 960x720, Balanced 880x660,
+      Performance 720x540, Ultra 480x360, upscaled to the largest 4:3 area the panel shows
+      (`GetDisplaySize`: 1440x1080 on the Thor, 1280x960 on such a screen). Field of view's
+      degrees stay the 16:9 width's (it scales the game's 60-degree vertical view, so the same
+      setting gives the same height). Run 695: 4:3 with FSR 3.1 Balanced and Lossless 2x -
+      880x660 to 1440x1080, the generator at 1440x1080, about 60 frames shown a second (the
+      game about 30, as at 16:9), the HUD right; run 696: 1440x1080 without FSR 3.1, the device
+      720x540 at 2x, about 49 frames shown with Lossless 2x. The launcher's rows by the D-pad: 4:3's
+      list 960x720 -> 1280x960 -> 1440x1080 and down to 640x480, back to 16:9 taking 1280x720
+      and stepping to 2560x1440, never into 4:3's. Not checked on a 4:3 screen itself (the
+      launcher, the options panel and the on-screen controller there).
 
 ## Phase 10 — Polish
 

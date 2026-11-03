@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- **Aspect ratio: 16:9 or 4:3**, in Settings above Rendering resolution. 4:3 is for 4:3 screens
+  such as 1280x960 handhelds: the game draws its own 4:3 picture and lays out its HUD, menus and
+  conversations for it, filling the screen. Rendering resolution then offers 640x480, 960x720,
+  1280x960 and 1440x1080, and FSR 3.1 and frame generation work at 4:3 too. 16:9 stays the
+  default.
+
 ## 0.1.7-alpha - "Open Alpha"
 
 ### Fixed

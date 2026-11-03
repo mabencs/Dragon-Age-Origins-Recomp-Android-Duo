@@ -792,15 +792,29 @@ final class OptionsPanel {
             return;
         }
         Options.Option option = options[optionIndex];
-        int index = option.indexOf(Options.read(dir, option)) + delta;
-        if (wrap) {
-            index = Math.floorMod(index, option.values.length);
-        } else if (index < 0 || index >= option.values.length) {
+        int index = option.indexOf(Options.read(dir, option));
+        // PLAN 9.22: past the values not offered (Rendering resolution's other aspect).
+        int tries = option.values.length;
+        do {
+            index += delta;
+            if (wrap) {
+                index = Math.floorMod(index, option.values.length);
+            } else if (index < 0 || index >= option.values.length) {
+                return;
+            }
+        } while (!Options.allowed(dir, option, option.values[index]) && --tries > 0);
+        if (!Options.allowed(dir, option, option.values[index])) {
             return;
         }
         String value = option.values[index];
         if (!Options.write(dir, option, value)) {
             return;
+        }
+        // PLAN 9.22: a new aspect takes its own default resolution unless the one chosen
+        // is already of it - written, so the game's side reads the same.
+        if (option.file.equals("aspect")) {
+            Options.Option resolution = Options.byFile("resolution");
+            Options.write(dir, resolution, Options.read(dir, resolution));
         }
         notTaken[optionIndex] = false;
         // Before the game every option is taken as it launches; nothing to apply.

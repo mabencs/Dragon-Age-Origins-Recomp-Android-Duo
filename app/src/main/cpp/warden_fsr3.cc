@@ -66,6 +66,10 @@ FfxErrorCode ffxSetFrameGenerationConfigToSwapchainVK(FfxFrameGenerationConfig c
   return FFX_ERROR_INVALID_ARGUMENT;
 }
 
+namespace warden {
+bool VideoFourByThree();  // warden_video.cc: Aspect ratio 4:3 (PLAN 9.22)
+}  // namespace warden
+
 namespace warden::fsr3 {
 
 void SetHalfPrecision(bool half) { g_half.store(half, std::memory_order_relaxed); }
@@ -82,6 +86,25 @@ void RenderSize(uint32_t& width, uint32_t& height) {
         word[0] = 0;
       }
       std::fclose(file);
+    }
+    // PLAN 9.22: Aspect ratio 4:3 - the profiles' 4:3 sizes, of the largest 4:3 area the
+    // panel shows (1440x1080 on the Thor, 1280x960 on a 1280x960 screen), the widths in
+    // whole 80-pixel EDRAM tiles: Quality 960x720, Balanced 880x660, Performance 720x540,
+    // Ultra Performance 480x360. The Rendering resolution's 4:3 sizes below.
+    const bool four_by_three = warden::VideoFourByThree();
+    if (four_by_three) {
+      if (!std::strcmp(word, "quality")) {
+        return Size{960, 720};
+      }
+      if (!std::strcmp(word, "balanced")) {
+        return Size{880, 660};
+      }
+      if (!std::strcmp(word, "performance")) {
+        return Size{720, 540};
+      }
+      if (!std::strcmp(word, "ultra")) {
+        return Size{480, 360};
+      }
     }
     if (!std::strcmp(word, "performance")) {
       return Size{960, 540};
@@ -109,19 +132,25 @@ void RenderSize(uint32_t& width, uint32_t& height) {
       }
       std::fclose(file);
     }
+    if (four_by_three) {
+      // 640x480, 960x720 (the default), 1280x960 - each in the EDRAM in one tile (240, 540
+      // and 960 tiles of the 1,024) - and 1440x1080 at 720x540, twice it (RenderScale).
+      if (!std::strcmp(resolution, "640x480")) {
+        return Size{640, 480};
+      }
+      if (!std::strcmp(resolution, "1280x960")) {
+        return Size{1280, 960};
+      }
+      if (!std::strcmp(resolution, "1440x1080")) {
+        return Size{720, 540};
+      }
+      return Size{960, 720};
+    }
     if (!std::strcmp(resolution, "960x540")) {
       return Size{960, 540};
     }
     if (!std::strcmp(resolution, "1360x768")) {
       return Size{1360, 768};
-    }
-    // The 4:3 test (files/hack-video-mode "WxH 4:3"): 4:3 sizes, in the EDRAM in one tile -
-    // 960x720 540 tiles of 80x16, 1280x960 960 (of the 1,024 the layout gives each).
-    if (!std::strcmp(resolution, "960x720")) {
-      return Size{960, 720};
-    }
-    if (!std::strcmp(resolution, "1280x960")) {
-      return Size{1280, 960};
     }
     // Above 1280x720 the game's layout of the EDRAM does not fit (its depth at 0 and its
     // colour at 1024 for every pass; at 1920x1080 each needs 1,632 tiles): the device at
@@ -166,6 +195,9 @@ uint32_t RenderScale() {
     // FSR 3.1's profiles pick the size themselves.
     if (word[0] && std::strcmp(word, "off") != 0) {
       return 1u;
+    }
+    if (warden::VideoFourByThree()) {
+      return !std::strcmp(resolution, "1440x1080") ? 2u : 1u;  // PLAN 9.22
     }
     return (!std::strcmp(resolution, "1600x900") || !std::strcmp(resolution, "1920x1080") ||
             !std::strcmp(resolution, "2560x1440"))
