@@ -1,15 +1,21 @@
 # Changelog
 
-## Unreleased
+## 0.1.5-alpha - "Open Alpha"
 
 ### Fixed
 
-- **Updating from the launcher could fail right after you tapped Install** in Android's dialog,
-  with "the install was cancelled": the launcher, back in front, cancelled the install Android
-  had just started. It now waits for Android's answer. If Android's dialog was closed without
-  installing, the row offers **Try again** after half a minute. This fix works from the version
-  after this one onwards; from 0.1.4-alpha and earlier, try again, or install the APK from the
-  releases page by hand over the app (your saves, game data and settings stay).
+- **Updating from the launcher could fail right after you tapped Update** in Android's dialog,
+  with "The update failed: the install was cancelled". The launcher came back to the front and
+  cancelled the install Android had just started. It now waits for Android to finish. If
+  Android's dialog was closed without installing, the row offers **Try again** after half a
+  minute.
+
+### Installing
+
+0.1.2-alpha to 0.1.4-alpha still have the old launcher, so updating to this version from them
+can fail the same way. Tap **Try again** - it sometimes gets through - or download the APK below
+and install it over the app by hand: your saves, game data and settings stay. Updates from this
+version on install normally.
 
 ## 0.1.4-alpha - "Open Alpha"
 

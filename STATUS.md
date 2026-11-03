@@ -7,7 +7,7 @@ starts by re-deriving context that was already paid for.
 | | |
 |---|---|
 | **Last updated** | 2026-11-03 (session 43) |
-| **Version** | **0.1.4-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-03, the tag `v0.1.4-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
+| **Version** | **0.1.5-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-03, the tag `v0.1.5-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
 | **Next action** | **Published** (2026-11-02): https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo, the 0.1.0-alpha APK on its Releases page. Next: what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
@@ -1911,8 +1911,12 @@ Newest first. One short entry per session: what changed, what's next.
   install Android had just begun. Fixed - nothing abandoned on the way back; Try again after
   30 s without an answer; only the current session's answers taken. Checked with DAO Debug
   updating itself from a local feed (run 681: cancel, Try again, allow, Update - installed in
-  place, twice). Committed, not released: 0.1.2-0.1.4 keep the bug, so their players retry or
-  install by hand. DAO Debug back on the normal build, the test feed and permission removed.
+  place, twice). 0.1.2-0.1.4 keep the bug, so their players retry or install by hand. DAO
+  Debug back on the normal build, the test feed and permission removed. Then the owner's own
+  check: the fixed release build installed over the published app as a faux 0.1.3-alpha (the
+  owner asked; not kept or published), and its launcher updated it to the real 0.1.4 from
+  GitHub (14:54, `back from Android's installer - waiting for its answer`, then 0.1.4 the
+  newest). **0.1.5-alpha** released with the fix (the tag `v0.1.5-alpha`).
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 
