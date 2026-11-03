@@ -1,14 +1,24 @@
 # Changelog
 
-## Unreleased
+## 0.1.8-alpha - "Open Alpha"
 
 ### New
 
-- **Aspect ratio: 16:9 or 4:3**, in Settings above Rendering resolution. 4:3 is for 4:3 screens
-  such as 1280x960 handhelds: the game draws its own 4:3 picture and lays out its HUD, menus and
-  conversations for it, filling the screen. Rendering resolution then offers 640x480, 960x720,
-  1280x960 and 1440x1080, and FSR 3.1 and frame generation work at 4:3 too. 16:9 stays the
-  default.
+- **Aspect ratio: 16:9 or 4:3 (experimental)**, in Settings above Rendering resolution. 4:3 is
+  for 4:3 screens such as 1280x960 handhelds: the game draws its own 4:3 picture and lays out its
+  HUD, menus and conversations for it, filling the screen. Rendering resolution then offers
+  640x480, 960x720, 1280x960 and 1440x1080, and FSR 3.1 and frame generation work at 4:3 too.
+  16:9 stays the default.
+- **4:3 is experimental:** it has been tested only on the AYN Thor's widescreen display (where it
+  shows with bars at the sides), not yet on an actual 4:3 screen. If you try it on one, a report
+  of how the launcher, the settings and the game look is very welcome.
+
+### Installing
+
+Updates from the launcher: 0.1.5-alpha to 0.1.7-alpha install this version under **Launch Dragon
+Age**. From 0.1.2-alpha to 0.1.4-alpha the launcher's update can fail after you tap Update - tap
+**Try again**, or download the APK below and install it over the app by hand. Your saves, game
+data and settings stay.
 
 ## 0.1.7-alpha - "Open Alpha"
 

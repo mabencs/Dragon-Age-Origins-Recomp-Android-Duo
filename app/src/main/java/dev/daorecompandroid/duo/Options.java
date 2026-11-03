@@ -88,14 +88,16 @@ final class Options {
         // a 4:3 screen - it has a true 4:3 mode, the camera and its HUD laid out for it (runs
         // 692-694) - and shows it at 4:3; Rendering resolution then offers 4:3 sizes, FSR
         // 3.1 its 4:3 profiles (warden_video.cc, warden_fsr3.cc). From the next start.
+        // Experimental (the owner, 2026-11-03): not yet seen on a 4:3 screen itself.
         new Option("aspect", "Aspect ratio", "16:9", false,
                 new String[] {"16:9", "4:3"},
-                new String[] {"16:9", "4:3"},
+                new String[] {"16:9", "4:3 (experimental)"},
                 new String[] {
                     "Widescreen, the game's usual picture - the Thor's screen shape.",
-                    "The game's own 4:3 picture and HUD, for 4:3 screens such as 1280x960"
-                            + " handhelds; on a widescreen panel it shows with bars at the"
-                            + " sides. Field of view's degrees stay those of the 16:9 width.",
+                    "Experimental: the game's own 4:3 picture and HUD, for 4:3 screens such"
+                            + " as 1280x960 handhelds - not yet tried on one. On a widescreen"
+                            + " panel it shows with bars at the sides. Field of view's degrees"
+                            + " stay those of the 16:9 width.",
                 }),
         // PLAN 9.16 (the owner, 2026-11-01): the size the game renders at without FSR 3.1,
         // from the next start, Upscaling filling the panel. Up to 1360x768 the game's device
