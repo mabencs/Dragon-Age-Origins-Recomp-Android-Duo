@@ -7,7 +7,7 @@ starts by re-deriving context that was already paid for.
 | | |
 |---|---|
 | **Last updated** | 2026-11-03 (session 43) |
-| **Version** | **0.1.3-alpha, "Open Alpha"** (`CHANGELOG.md`; built, not yet published - the owner reviews the changelog first), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
+| **Version** | **0.1.3-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-03, the tag `v0.1.3-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
 | **Next action** | **Published** (2026-11-02): https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo, the 0.1.0-alpha APK on its Releases page. Next: what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
@@ -1897,7 +1897,10 @@ Newest first. One short entry per session: what changed, what's next.
   `da_vignette` 256x512 DXT5 - the PC mod "Vignette Be Gone" blanks that texture; the owner's
   copy was a pointer only, nothing of it in the repo) and dropped in the command processor
   while off. Run 678 off, 679 on, 680 switched off live through the panel.
-- Uncommitted until the owner's go-ahead.
+- **0.1.3-alpha** released with all of this (the tag `v0.1.3-alpha`; `release.py` clean, SHA-256
+  `9e0d9878…`). Not installed on the Thor on purpose: the owner takes it through the launcher's
+  update from 0.1.2-alpha, the first real use of PLAN 13.1 on the published app. The game-code
+  ABI is unchanged.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 
