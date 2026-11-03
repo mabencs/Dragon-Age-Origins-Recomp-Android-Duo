@@ -2958,6 +2958,19 @@ edge images over the eight turns and mirrors): the owner's screenshots, the deck
 game's map screen, matched only turned 180 degrees (0.71, the rest 0.29-0.38); after the fix,
 run 684 at the King's Camp matches the game's map screen unturned (0.77, the rest 0.29-0.36).
 
+**Six more areas (the owner asked), run 685,** by motion: the hero walked forward for a second,
+the HUD minimap's slide (minimap.gfx turns the map by North as map.gfx does, and shows it
+explored or not) against the deck's player icon. The angle between the two: the City Elf
+alienage (North 3) -2 degrees, the City Elf home (3) -5, the arl's estate exterior (1) +7, the
+Tower of Ishal's level 3 (1) +2, Denerim's market (2) 0, Orzammar's commons (0) -2 - a map still
+half a turn out would show 180, a quarter turn 90. The walks were short (about 5 minimap
+pixels), so each angle is good to about 10 degrees. North from the areas' own files: the 360's
+`.are` is GFF 3.2 little-endian (`ARE V3.2`), North a top-level field - 312 of 352 areas 0, 10
+are 1, 14 are 2, 16 are 3; the 26 odd ones were upside down. Not usable for this: the game's
+map screen right after a jump (it opens on the last tab used, and a fresh area is mostly
+unexplored) and matching the minimap's picture (the camera cone covers it; it chose a wrong
+turn on the King's Camp, whose answer was known).
+
 ## BUG-114
 **The launcher's update failed after Android's Install**
 Our app (`AppUpdate.java`, PLAN 13.1) · severity high · **FIXED** session 43, in 0.1.5-alpha

@@ -1,17 +1,26 @@
 # Changelog
 
-## Unreleased
+## 0.1.6-alpha - "Open Alpha"
 
 ### Fixed
 
-- **The deck's map was upside down in some areas**, the King's Camp at Ostagar among them. It
-  is now turned the way the game's own map screen shows it, in every area.
+- **The deck's map was upside down in some areas**, among them the King's Camp at Ostagar,
+  the City Elf alienage, and the Tower of Ishal's top floor. It now faces the same way as the
+  game's own map screen and minimap, in every area.
 
 ### Changed
 
-- **The deck's map is bigger:** it takes nearly the whole tab, with its hint written over it.
-- **The line at the bottom of the deck** (the game's title and a count of values) is gone. It
-  appears only while the deck waits for the game.
+- **A bigger map on the deck:** it now takes up nearly the whole tab, with its hint written
+  over the map instead of below it.
+- **The line at the bottom of the deck** (the game's title and a count of values) is gone from
+  every tab. It only appears while the deck is waiting for the game.
+
+### Installing
+
+Updates from the launcher: 0.1.5-alpha installs this version under **Launch Dragon Age**.
+From 0.1.2-alpha to 0.1.4-alpha the launcher's update can fail after you tap Update - tap
+**Try again**, or download the APK below and install it over the app by hand. Your saves, game
+data and settings stay.
 
 ## 0.1.5-alpha - "Open Alpha"
 
