@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.4-alpha - "Open Alpha"
+
+### New
+
+- **See releases on GitHub.** A new row under **Launch Dragon Age** opens the project's
+  releases page in your browser, where you can see every version and what each one changed.
+  The app itself downloads nothing for it - your browser opens the page.
+
+### Installing
+
+Updates from the launcher: 0.1.2-alpha and 0.1.3-alpha offer this version under **Launch
+Dragon Age**. Earlier versions are installed by hand; your saves, game data and settings stay.
+
 ## 0.1.3-alpha - "Open Alpha"
 
 ### New

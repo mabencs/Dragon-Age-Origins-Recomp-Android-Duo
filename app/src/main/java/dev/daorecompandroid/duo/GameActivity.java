@@ -749,6 +749,17 @@ public final class GameActivity extends Activity {
         }
 
         @Override
+        public void onReleasesPage() {
+            // PLAN 13.2: the browser opens the page; the app fetches nothing for it.
+            String page = BuildConfig.SOURCE_URL + "/releases";
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(page)));
+            } catch (RuntimeException e) {
+                Log.w(TAG, "options: no browser for " + page, e);
+            }
+        }
+
+        @Override
         public void onMods() {
             // PLAN 10.12: before the game only - the mods are laid over the disc as it starts.
             if (preLaunch) {

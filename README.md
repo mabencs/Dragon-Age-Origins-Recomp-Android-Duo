@@ -248,7 +248,8 @@ to allow installs from this app. The app closes as it installs: open it again. W
 connection there is simply no row, and the game plays as ever.
 
 A row that says **Manual update** opens the release's page instead: that version has to be
-installed by hand, and its notes say why.
+installed by hand, and its notes say why. **See releases on GitHub**, under **Launch Dragon
+Age**, opens the list of every release and its changes in your browser at any time.
 
 ### The launcher
 
@@ -257,6 +258,7 @@ Opening the app shows the launcher: the rows below, then every setting.
 | Row | What it does |
 |---|---|
 | **Launch Dragon Age** | Starts the game with the settings below it. Ready once the disc image is extracted, a title update is in place and the game's program is built (**Build**, below). It also tells you if the last session ended badly (a crash, or Android closing the app). |
+| **See releases on GitHub** | Opens the project's releases page in your browser: every version and what each one changed. |
 | **Build** | Makes the game's program from your disc and title update, once, when you choose it ([Setting up](#setting-up-on-the-device), step 7): **Start**, then **building N%**, then **Done**; **Build again** when you choose another title update, or an app update needs it. |
 | **Disc image (.iso)** | Chooses your disc image and extracts it ([Setting up](#setting-up-on-the-device)). |
 | **Ultimate Edition disc 2 (.iso)** | Installs Awakening and the DLC from disc 2, and puts its Title Update 6 in place. |

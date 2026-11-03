@@ -3720,6 +3720,13 @@ on a clean device, given the two disc images, makes the game's code and plays.
       bold, its bullets, links and code marks plain, HTML comments and the notes' own
       "Installing" section left out (`AppUpdate.formatNotes`, `GameActivity.showReleaseNotes`).
       Checked with a test feed on the debug build.
+- [x] 13.2 **See releases on GitHub (the owner asked, 2026-11-03; session 43).** A launcher row
+      under Launch Dragon Age (`OptionsPanel.RELEASES_ROW`) that opens `warden.sourceUrl` +
+      `/releases` in the browser (`ACTION_VIEW`): every release and its notes. The browser
+      fetches the page, not the app; the row is hidden in the game and in a build without a
+      source URL. Shipped in 0.1.4-alpha - the owner asked for "0.1.3.5", but the update check
+      in 0.1.2 and 0.1.3 reads three numbers and the version code follows three, so a fourth
+      would never be offered to 0.1.3; the owner chose 0.1.4.
 
 ---
 
