@@ -24,10 +24,17 @@ import java.util.Map;
  * (SECOND-SCREEN.md §2): a presentation display other than the default one, switched on.
  * Without one - a single-screen device - there is no deck and nothing else changes.
  *
- * <p>Two routes, Q6: by default {@link DeckActivity} in its own process, launched onto
- * the display (Route A); files/deck-route holding "presentation" makes it a
- * {@link Presentation} in the game's process instead (Route B), to compare. Either way the
- * window never takes key focus.
+ * <p>Two routes, Q6: by default a {@link Presentation} in the game's process (Route B);
+ * files/deck-route holding "activity" makes it {@link DeckActivity} in its own process,
+ * launched onto the display (Route A), as it was until BUG-116. Either way the window never
+ * takes key focus.
+ *
+ * <p>BUG-116 (the owner chose Route B, 2026-11-03): on the AYN Thor an app with an activity
+ * on the second screen is a second-screen app - AYN's Game Assistant lists its uid in
+ * sys.audio.uids and AYN's AudioFlinger gives its sound the second screen's own volume
+ * instead of the media volume. With DeckActivity there, the whole game had that volume. A
+ * Presentation is a window of the game's activity, no task on that display, so the game is
+ * never listed and Android applies its media volume to the game as to any app.
  */
 final class Deck {
 
@@ -52,6 +59,11 @@ final class Deck {
         return null;
     }
 
+    /** Route A, DeckActivity on the second display - a test switch since BUG-116. */
+    static boolean usesActivity(File filesDir) {
+        return "activity".equals(readWord(new File(filesDir, "deck-route")));
+    }
+
     /**
      * Opens the deck if the option wants it and there is a display for it; whether it
      * opened (the performance overlay shows on the main screen when it did not).
@@ -66,12 +78,12 @@ final class Deck {
             Log.i(TAG, "deck: no second display");
             return false;
         }
-        String route = readWord(new File(filesDir, "deck-route"));
+        boolean asActivity = usesActivity(filesDir);
         Log.i(TAG, "deck: display " + display.getDisplayId() + " (" + display.getName()
-                + "), " + ("presentation".equals(route) ? "a Presentation in the game's process"
-                : "DeckActivity in its own process"));
+                + "), " + (asActivity ? "DeckActivity in its own process"
+                : "a Presentation in the game's process"));
         try {
-            if ("presentation".equals(route)) {
+            if (!asActivity) {
                 openPresentation(activity, display, filesDir);
             } else {
                 ActivityOptions options = ActivityOptions.makeBasic();
@@ -95,42 +107,68 @@ final class Deck {
         presentation = new Presentation(activity, display);
         presentation.getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        DeckView view = new DeckView(presentation.getContext(),
-                new File(filesDir, "deck-trace").exists());
-        presentation.setContentView(view);
-        presentation.show();
-        DeckSource source = new DeckSource.Native();
-        Handler ui = new Handler(Looper.getMainLooper());
+        final Presentation shown = presentation;
+        final boolean showData = new File(filesDir, "deck-trace").exists();
+        final DeckSource source = new DeckSource.Native();
+        final Handler ui = new Handler(Looper.getMainLooper());
         pullThread = new HandlerThread("deck-pull");
         pullThread.start();
-        Handler pull = new Handler(pullThread.getLooper());
-        // PLAN 8.8: a quickbar tap, off the UI thread; the answer back on it.
-        view.setQuickbar(slot -> pull.post(() -> {
-            String why = source.quickslot(slot);
-            ui.post(() -> view.quickslotAnswer(slot, why));
-        }));
-        view.setItems((action, item, ability) -> pull.post(() -> {
-            String why = source.item(action, item, ability);
-            ui.post(() -> view.itemAnswer(why));
-        }));
+        final Handler pull = new Handler(pullThread.getLooper());
+        // The faces given so far, by slot, for a deck made again with the game's art.
+        final android.graphics.Bitmap[] facesGiven = new android.graphics.Bitmap[DeckFaces.SLOTS];
+        // The deck in the window: plain first, then again with the game's typefaces and HUD
+        // art (PLAN 8.4, as DeckActivity does), its taps wired each time.
+        final DeckView[] current = new DeckView[1];
+        java.util.function.Function<DeckView, DeckView> wire = view -> {
+            // PLAN 8.8: a quickbar tap, off the UI thread; the answer back on it.
+            view.setQuickbar(slot -> pull.post(() -> {
+                String why = source.quickslot(slot);
+                ui.post(() -> view.quickslotAnswer(slot, why));
+            }));
+            view.setItems((action, item, ability) -> pull.post(() -> {
+                String why = source.item(action, item, ability);
+                ui.post(() -> view.itemAnswer(why));
+            }));
+            for (int slot = 0; slot < facesGiven.length; slot++) {
+                if (facesGiven[slot] != null) {
+                    view.setFace(slot, facesGiven[slot]);
+                }
+            }
+            current[0] = view;
+            shown.setContentView(view);
+            return view;
+        };
+        wire.apply(new DeckView(presentation.getContext(), showData));
+        presentation.show();
+        new Thread(() -> {
+            DeckFonts fonts = DeckFonts.load(activity);
+            DeckArt art = DeckArt.load(activity);
+            if (fonts != null || art != null) {
+                ui.post(() -> {
+                    if (presentation == shown) {
+                        wire.apply(new DeckView(shown.getContext(), showData, fonts, art));
+                    }
+                });
+            }
+        }, "deck-art").start();
         pull.post(new Runnable() {
             @Override
             public void run() {
-                if (presentation == null) {
+                if (presentation != shown) {
                     return;
                 }
-                source.watch(view.watches());
+                source.watch(current[0].watches());
                 final Map<String, String> values = DeckSource.parse(source.snapshot());
                 final long[] frames = source.frames();
                 final boolean perf = "on".equals(
                         Options.read(filesDir, Options.byFile("perf")));
                 ui.post(() -> {
-                    if (presentation == null) {
+                    if (presentation != shown) {
                         return;
                     }
                     try {
-                        view.setPerfVisible(perf);
-                        view.update(values, frames, true);
+                        current[0].setPerfVisible(perf);
+                        current[0].update(values, frames, true);
                     } catch (RuntimeException e) {
                         Log.e(TAG, "deck: update failed - closing", e);
                         close();
@@ -148,8 +186,9 @@ final class Deck {
                             return source.portrait(slot);
                         }
                     }, (slot, face) -> ui.post(() -> {
-                        if (presentation != null) {
-                            view.setFace(slot, face);
+                        if (presentation == shown) {
+                            facesGiven[slot] = face;
+                            current[0].setFace(slot, face);
                         }
                     }));
                 }
@@ -268,9 +307,15 @@ final class Deck {
         }
         hidden = false;
         if (presentation != null) {
-            presentation.show();
-            Log.i(TAG, "deck: back with the game");
-            return;
+            // Android dismisses a Presentation whose display goes (BUG-110's wake, a cable):
+            // shown again only on a display still there and on, else made afresh.
+            Display shownOn = presentation.getDisplay();
+            if (shownOn != null && shownOn.isValid() && shownOn.getState() == Display.STATE_ON) {
+                presentation.show();
+                Log.i(TAG, "deck: back with the game");
+                return;
+            }
+            close();
         }
         Log.i(TAG, "deck: back with the game");
         // Not asking findDisplay again here: the display can come on between the two, and

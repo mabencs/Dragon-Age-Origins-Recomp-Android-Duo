@@ -1200,8 +1200,14 @@ wilds`; wait for `game: mode is now 1 (combat)` exactly - `mode is now 1` also m
 the movie's 10). `files/deck-trace` (a test switch) logs every token path the UI
 registers (`deck: scene S observes PATH as ID`) and every value change (`deck: PATH =
 VALUE`, bounded) and adds the deck's Data tab with everything the mirror holds;
-`files/deck-route` holding `presentation` makes the deck a Presentation in the game's
-process (8.1's Route B, for comparison). With `files/deck-trace` the mirror also dumps the
+The deck is a Presentation in the game's process (8.1's Route B, the default since BUG-116);
+`files/deck-route` holding `activity` makes it DeckActivity in its own process (Route A) - and
+puts the game in AYN's second-screen volume (`adb shell getprop sys.audio.uids` lists its uid).
+**The deck's cost:** `deck: in 30 s, reads X ms (Y ms/s); N snapshots ... positions read N
+times, M changed`, every 30 s while it pulls - the game thread's time in the deck's reads and
+snapshots. **The game's volume** (BUG-116): AudioFlinger's power log of the primary output
+(`dumpsys media.audio_flinger`, the AudioOut_D thread's dB rows) shows what reaches the
+hardware; `settings get system secondary_screen_volume_level` is AYN's second-screen level. With `files/deck-trace` the mirror also dumps the
 data model's tree to the log (`deck: tree PATH = TEXT (N members)`) after ten seconds of
 exploring, twice at most - the roots are listed in `warden_deck.cc`. **The deck by adb:**
 `adb shell input -d 4 tap x y` (coordinates as `adb exec-out screencap -p -d <its physical

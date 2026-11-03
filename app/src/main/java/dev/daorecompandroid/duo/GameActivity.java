@@ -638,9 +638,17 @@ public final class GameActivity extends Activity {
      * the sound takes the volume here, on those devices only - anywhere Android applies it,
      * it would be applied twice. Run 613: from index 15 to 8 the output drops 13 dB, this
      * gain alone; 26 would be both.
+     *
+     * <p>BUG-116 found why: AYN gives an app with an activity on the second screen that
+     * screen's own volume (sys.audio.uids, secondary_screen_volume_level) instead of the media
+     * volume - and DeckActivity put the game there. The deck is a Presentation now (Route B),
+     * the game is never listed, and Android applies the media volume itself; doing it here as
+     * well made it twice (run 690: 27 dB from 15 to 8 with no deck). So only with Route A, the
+     * test switch.
      */
-    private static boolean followsMediaVolumeItself() {
-        return "AYN".equalsIgnoreCase(android.os.Build.MANUFACTURER);
+    private boolean followsMediaVolumeItself() {
+        return "AYN".equalsIgnoreCase(android.os.Build.MANUFACTURER)
+                && Deck.usesActivity(getFilesDir());
     }
 
     private BroadcastReceiver mediaVolume;

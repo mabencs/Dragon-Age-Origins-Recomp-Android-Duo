@@ -1934,8 +1934,13 @@ Newest first. One short entry per session: what changed, what's next.
   screen puts the game in AYN's `sys.audio.uids`, whose sound gets `secondary_screen_volume_level`
   instead of the media volume (BUG-109's real cause); muting while away drags that level to 0,
   and held volume-up at the top raises it again. With the deck off the media volume is applied
-  twice (27 dB for 15 to 8). Measured with AudioFlinger's power log (runs 689-690). The fix waits
-  on the owner: the deck as a Presentation (Route B, never listed) or the gain chosen by listing.
+  twice (27 dB for 15 to 8). Measured with AudioFlinger's power log (runs 689-690). **Fixed**
+  (the owner chose it): the deck is a Presentation by default (Route B; `files/deck-route
+  activity` for Route A), so the game is never listed and Android applies the media volume; the
+  app's own gain only for Route A. The Presentation loads the game's fonts and HUD art now, and
+  is made afresh after its display went. Run 691: no listing, 14.2 dB for 15 to 8, the owner's
+  case right, held volume-up at the top no louder, the deck back after Home and a wake; frame
+  times as before.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

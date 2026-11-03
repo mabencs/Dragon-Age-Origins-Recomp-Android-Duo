@@ -1316,8 +1316,12 @@ Depends on Phase 6. Full design in [`SECOND-SCREEN.md`](SECOND-SCREEN.md).
       `setLaunchDisplayId` on API 33. Test both on the real device. **Done (session 37,
       the owner asked for Phase 8, 2026-10-30; runs 454-457): both work on the Thor's
       Android 13** - `DeckActivity` launched onto display 4 (Route A), and a
-      `Presentation` (Route B, `files/deck-route` holding `presentation`). Route A is the
-      default: it runs the deck in its own process (8.7). Its catch, found on the device
+      `Presentation` (Route B, `files/deck-route` holding `presentation`). Route A was the
+      default until session 43: it runs the deck in its own process (8.7). **Since BUG-116
+      (the owner's choice, 2026-11-03) Route B is the default** and `files/deck-route` holding
+      `activity` gives Route A: on the Thor an activity on the second screen makes the whole
+      app a second-screen app, with the second screen's own volume instead of the media
+      volume. Route A's catch, found on the device
       (BUG-078): launching an activity on display 4 made it the focused display, so the
       controller's keys would go there - to a window that cannot take them; the deck
       brings the game's activity back to the front once connected (the game holds for
@@ -1463,6 +1467,9 @@ Depends on Phase 6. Full design in [`SECOND-SCREEN.md`](SECOND-SCREEN.md).
       its own process (`:deck`), the game's main thread never draws it, the mirror's
       hooks never wait on it; the deck's process killed mid-combat (the Korcari Wilds'
       wolves) - the game on at 294, 284, 288, 292 frames in 5 s against 292 and 326
+      (session 43: with Route B the default for BUG-116 the deck draws in the game's process,
+      on its UI thread - still never on the render thread or waited on by the mirror's
+      hooks, its updates caught; a fault closes the deck, but a crash in it is the game's)
       before, same process, nothing logged. An exception in the deck closes the deck;
       the game's process gone, the deck closes itself.
 - [x] 8.8 **The touch quickbar - the deck's one write path - done (the owner asked,

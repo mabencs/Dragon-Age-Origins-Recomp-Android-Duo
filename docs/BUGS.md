@@ -83,14 +83,14 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
-| [BUG-116](#bug-116) | the device's firmware (AYN Thor) / our app | high | **OPEN** | The game's volume does not follow Android's: AYN gives apps on the second screen their own volume, and the deck puts the game there. Held volume-up past the top raises it further; with the deck off, the media volume is applied twice |
+| [BUG-116](#bug-116) | the device's firmware (AYN Thor) / our app | high | **FIXED** | The game's volume did not follow Android's: AYN gives apps on the second screen their own volume, and the deck (an activity there) put the game there. Held volume-up past the top raised it further; with the deck off, the media volume was applied twice. The deck is a window of the game's now |
 | [BUG-115](#bug-115) | our app (the deck's Map tab, PLAN 8.4) | medium | **FIXED** | The deck's map was upside down against the game's map screen in every area whose North is 1 or 3 (the King's Camp): it was turned anticlockwise, the game turns clockwise |
 | [BUG-114](#bug-114) | our app (the update, PLAN 13.1) | high | **FIXED** (0.1.5-alpha) | The launcher's update failed after Android's Install: the launcher, back in front, abandoned the session Android was installing - "the install was cancelled". In 0.1.2 to 0.1.4; mostly fails, sometimes wins |
 | [BUG-113](#bug-113) | our runtime (FSR 3.1's composite, frame generation's UI paste) | medium | **FIXED** | With FSR 3.1 the upper corners of the world juddered: the game's corner vignette, drawn after the capture, counted as UI, so the corners showed the jittered render-size frame |
 | [BUG-112](#bug-112) | our runtime (FSR 3.1) / a replaceable driver, dropped | medium | **FIXED** (the fallback); the driver work dropped | With FSR 3.1 chosen on a device where its upscaler cannot be made, the jitter stayed on: the whole world juddered under a still HUD. Found with Mesa's Turnip, which the owner then dropped |
 | [BUG-111](#bug-111) | our app (the update, PLAN 13.1) | medium | **FIXED** | Before it shipped: cancelling Android's first install dialog left the launcher's row on Installing for good, ignoring taps |
 | [BUG-110](#bug-110) | our app (the deck, PLAN 8.1) | medium | **FIXED** | Back from sleep, the deck could be missing: the game came back before the second screen, the one try found no display on, and only a new start brought it back |
-| [BUG-109](#bug-109) | the device's firmware (AYN Thor) / our app | high | **WORKED AROUND** | The game's sound did not follow Android's media volume: audible with the media volume at 0. The app now applies the volume itself, on AYN devices |
+| [BUG-109](#bug-109) | the device's firmware (AYN Thor) / our app | high | **FIXED** (BUG-116) | The game's sound did not follow Android's media volume: audible with the media volume at 0. The app now applies the volume itself, on AYN devices |
 | [BUG-108](#bug-108) | our runtime (frame generation, PLAN 9.14) | high | **FIXED** | With an upscaler and Lossless frame generation, a conversation whose start had ten frames without a 3D scene froze the game for nearly 4 s: the generator made again at the small size and again at the large |
 | [BUG-107](#bug-107) | our app (the deck, PLAN 8.5) | medium | **FIXED** | The deck's Quests tab never showed a completed quest: they are in a list of their own, Journal.CompletedPlots, which it did not read - and it listed subplots as quests of their own, in no group |
 | [BUG-106](#bug-106) | our app (the deck, PLAN 8.1) | high | **FIXED** | With the second screen left as the top display, the first key waited on the deck's window, which takes none: "isn't responding", again after each Wait, and the deck gone with Close app - which a pad's button can press |
@@ -2943,7 +2943,7 @@ queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 
 ## BUG-116
 **The game's volume not fully following Android's**
 The device's firmware (AYN Thor) and our app (`GameActivity.reportMediaVolume`, BUG-109's
-workaround) · severity high · **OPEN** session 43
+workaround) · severity high · **FIXED** session 43 (the owner chose the fix)
 
 **What it looks like** (the owner, 2026-11-03): with Android's media volume at its top, holding
 volume-up makes the game louder still - most of all after putting the game away, muting, and
@@ -2974,11 +2974,20 @@ Measured (AudioFlinger's power log of the primary output, before the hardware):
 - After a resume by `am start` the deck did not come back (the launcher's own second-screen
   activity in front), so the game was not listed: the same double volume until it returns.
 
-**Options** (the owner to choose): the deck as a window of the game's (a Presentation on the
-second display, no task there) - the game never listed, Android applies the media volume, the
-app's own gain removed; or the app's gain chosen by whether the game is listed (none when not;
-when listed, the media volume against the second screen's level, which needs that setting to be
-readable by the app and cannot undo a level of 0).
+**Fixed** (the owner's choice of two - the other, the app's gain chosen by whether the game is
+listed, could not undo a second-screen level of 0): the deck is a Presentation, a window of the
+game's activity on the second display (PLAN 8.1's Route B, made the default; `files/deck-route`
+holding `activity` gives Route A back, as a test switch). Game Assistant lists apps with a
+*task* on that display, so the game is never listed, and Android applies the media volume to it
+as to any app; the app's own gain (BUG-109) is kept only for Route A. The Presentation now loads
+the game's typefaces and HUD art as DeckActivity does, and is made afresh when its display went
+(a wake). Run 691: `sys.audio.uids` empty throughout and no app gain; media 15 to 8 drops the
+game 14.2 dB (Android's curve, once); the owner's case - away, held down to 0 (the second screen's
+level dragged to 0 with it), up three, back - the game at media 3, then normal at 15; volume-up
+held 4 s at the top: no louder (-42.5 dB against -40.4); the deck back after Home and after sleep
+and wake. Frame times as with Route A (runs 688, 691: about 370 frames in 5 s, p95 27 ms). The
+cost: the deck runs in the game's process - a fault in it closes the deck (its updates are
+caught), but no longer in a process of its own (PLAN 8.7's reason for Route A).
 
 ## BUG-115
 **The deck's map upside down in some areas**
@@ -3134,7 +3143,10 @@ back with Home and back.
 ## BUG-109
 **The game's sound did not follow Android's media volume**
 The device's firmware (AYN Thor), worked around in our app (`GameActivity`,
-`warden_audio.cc`) · severity high · **WORKED AROUND** session 42
+`warden_audio.cc`) · severity high · **WORKED AROUND** session 42; the cause found and fixed
+as BUG-116 (session 43): AYN applies the second screen's own volume to any app with an activity
+on the second screen, and DeckActivity put the game there. The deck is a Presentation now and
+the workaround below is kept only for that route's test switch.
 
 **What it looked like** (the owner): tapping the volume buttons moved Android's slider but
 not the game; at media volume 0 the game could still be heard. Holding a button seemed to

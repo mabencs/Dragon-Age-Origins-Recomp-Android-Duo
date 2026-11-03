@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed
+
+- **The game's volume now follows Android's volume exactly.** On the AYN Thor, apps shown on
+  the second screen get a separate volume of their own, and the deck put the game there. That
+  is why holding volume-up at the top could make the game louder still, and why muting while
+  the game was put away could leave it too quiet after. The deck is now drawn as part of the
+  game's own window, so the game has only Android's media volume - and with the deck turned off,
+  the volume is no longer applied twice.
+
 ### Changed
 
 - **The party on the deck's map:** smaller icons that move smoothly as the party walks, and the
