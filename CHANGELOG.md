@@ -9,9 +9,9 @@
   HUD, menus and conversations for it, filling the screen. Rendering resolution then offers
   640x480, 960x720, 1280x960 and 1440x1080, and FSR 3.1 and frame generation work at 4:3 too.
   16:9 stays the default.
-- **4:3 is experimental:** it has been tested only on the AYN Thor's widescreen display (where it
+- **4:3 is experimental:** it has only been tested on the AYN Thor's widescreen display (where it
   shows with bars at the sides), not yet on an actual 4:3 screen. If you try it on one, a report
-  of how the launcher, the settings and the game look is very welcome.
+  of how the launcher, the settings, and the game look is very welcome.
 
 ### Installing
 
