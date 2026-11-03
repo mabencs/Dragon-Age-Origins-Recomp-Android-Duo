@@ -44,6 +44,12 @@ tools/game_check.local.txt
 # each user supplies from their own copy of that program. Never committed.
 [Ll]ossless.dll
 
+# ── Custom Vulkan drivers ──
+# Driver packages (adrenotools' .adpkg.zip, such as Turnip builds) are third-party
+# binaries each user supplies. Never committed.
+*.adpkg.zip
+*.adpkg
+
 # ── Build output ──
 /build/
 /out/
