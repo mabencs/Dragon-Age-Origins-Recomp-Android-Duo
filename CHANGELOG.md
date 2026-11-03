@@ -1,20 +1,27 @@
 # Changelog
 
-## Unreleased
+## 0.1.7-alpha - "Open Alpha"
 
 ### Fixed
 
 - **The game's volume now follows Android's volume exactly.** On the AYN Thor, apps shown on
-  the second screen get a separate volume of their own, and the deck put the game there. That
-  is why holding volume-up at the top could make the game louder still, and why muting while
-  the game was put away could leave it too quiet after. The deck is now drawn as part of the
-  game's own window, so the game has only Android's media volume - and with the deck turned off,
-  the volume is no longer applied twice.
+  the second screen get a separate volume of their own, and the deck put the game in that
+  group. That is why holding volume-up at the top could make the game louder still, and why
+  muting while the game was put away could leave it too quiet afterwards. The deck is now drawn
+  as part of the game's own window, so the game follows only Android's media volume. With the
+  deck turned off, the volume is no longer applied twice either.
 
 ### Changed
 
 - **The party on the deck's map:** smaller icons that move smoothly as the party walks, and the
-  character you control marked with a gold ring (it follows when you switch characters).
+  character you control is marked with a gold ring. It follows when you switch characters.
+
+### Installing
+
+Updates from the launcher: 0.1.5-alpha and 0.1.6-alpha install this version under **Launch
+Dragon Age**. From 0.1.2-alpha to 0.1.4-alpha the launcher's update can fail after you tap
+Update - tap **Try again**, or download the APK below and install it over the app by hand. Your
+saves, game data and settings stay.
 
 ## 0.1.6-alpha - "Open Alpha"
 
