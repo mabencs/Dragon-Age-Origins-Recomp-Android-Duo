@@ -1595,6 +1595,11 @@ Depends on Phase 6. Full design in [`SECOND-SCREEN.md`](SECOND-SCREEN.md).
       inside the map; zoomed out, icons may overlap by a little (0.62 of their size) and spread
       apart as the map zooms. Checked on the device with raw multi-touch events on the second
       screen's touch panel (`sendevent`, two slots) and screenshots.
+      **Later the same day (the owner):** the map turned as the game's map screen turns it
+      (BUG-115), and more of the deck for it - a 4 dp margin while the Map tab shows (12 and
+      10 for the others), the hint written over the map's foot, and the deck's footer (the
+      title and the count of values) gone while the game is connected, on every tab; it says
+      only "Waiting for the game…" now. Run 684.
 
 ---
 

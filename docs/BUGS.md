@@ -83,6 +83,7 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-115](#bug-115) | our app (the deck's Map tab, PLAN 8.4) | medium | **FIXED** | The deck's map was upside down against the game's map screen in every area whose North is 1 or 3 (the King's Camp): it was turned anticlockwise, the game turns clockwise |
 | [BUG-114](#bug-114) | our app (the update, PLAN 13.1) | high | **FIXED** (0.1.5-alpha) | The launcher's update failed after Android's Install: the launcher, back in front, abandoned the session Android was installing - "the install was cancelled". In 0.1.2 to 0.1.4; mostly fails, sometimes wins |
 | [BUG-113](#bug-113) | our runtime (FSR 3.1's composite, frame generation's UI paste) | medium | **FIXED** | With FSR 3.1 the upper corners of the world juddered: the game's corner vignette, drawn after the capture, counted as UI, so the corners showed the jittered render-size frame |
 | [BUG-112](#bug-112) | our runtime (FSR 3.1) / a replaceable driver, dropped | medium | **FIXED** (the fallback); the driver work dropped | With FSR 3.1 chosen on a device where its upscaler cannot be made, the jitter stayed on: the whole world juddered under a still HUD. Found with Mesa's Turnip, which the owner then dropped |
@@ -2937,6 +2938,25 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-115
+**The deck's map upside down in some areas**
+Our app (`DeckView.MapView`, PLAN 8.4) · severity medium · **FIXED** session 43
+
+**What it looked like** (the owner, 2026-11-03, the published app at the King's Camp,
+`ost000t`): the deck's map was the game's map screen turned half round - the bridge to the
+other half of the ruins on the wrong side.
+
+**Cause.** The game's map screen (`map.gfx`) sets the map's `_rotation` to 0, 90, 180 or 270
+for `Area.North` 0 to 3, and Flash turns clockwise. The deck turned the map by the same quarter
+turns anticlockwise: the same for North 0 and 2, half a turn wrong for 1 and 3. Run 471, which
+checked the King's Camp (North 3), compared an east-west road and where Jaden stood - both of
+which a half turn keeps.
+
+**Fixed.** The deck turns clockwise. Measured on the screens (normalised cross-correlation of
+edge images over the eight turns and mirrors): the owner's screenshots, the deck against the
+game's map screen, matched only turned 180 degrees (0.71, the rest 0.29-0.38); after the fix,
+run 684 at the King's Camp matches the game's map screen unturned (0.77, the rest 0.29-0.36).
 
 ## BUG-114
 **The launcher's update failed after Android's Install**

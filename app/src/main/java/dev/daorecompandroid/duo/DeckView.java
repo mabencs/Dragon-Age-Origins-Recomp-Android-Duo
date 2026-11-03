@@ -85,6 +85,8 @@ final class DeckView extends LinearLayout {
     private final FrameLayout content;
     private final TextView footerLeft;
     private final TextView footerRight;
+    private final LinearLayout footer;
+    private final View footerRule;
     private int current = -1;
     /** The Perf tab's place, and whether the "Performance tab/overlay" option shows it. */
     private int perfIndex = -1;
@@ -167,8 +169,12 @@ final class DeckView extends LinearLayout {
         content.setPadding(dp(12), dp(10), dp(12), dp(10));
         addView(content, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        addView(rule(EDGE), new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+        // The owner (2026-11-03): no footer while the game is connected - its title and the
+        // count of values said nothing; it remains only to say the deck is waiting.
+        footerRule = rule(EDGE);
+        addView(footerRule, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
         LinearLayout footer = new LinearLayout(context);
+        this.footer = footer;
         footer.setOrientation(HORIZONTAL);
         footer.setPadding(dp(12), dp(4), dp(12), dp(6));
         footerLeft = text(12, FAINT);
@@ -195,8 +201,13 @@ final class DeckView extends LinearLayout {
         lastFrames = frames;
         tabs.get(current).update(values, frames);
         watches = tabs.get(current).watching();
-        footerLeft.setText(connected ? "Dragon Age: Origins" : "Waiting for the game…");
-        footerRight.setText(connected ? values.size() + " values" : "");
+        footerLeft.setText(connected ? "" : "Waiting for the game…");
+        footerRight.setText("");
+        int footerShown = connected ? GONE : VISIBLE;
+        if (footer.getVisibility() != footerShown) {
+            footer.setVisibility(footerShown);
+            footerRule.setVisibility(footerShown);
+        }
     }
 
     /** The texts the current tab has open: read patterns, one a line (any thread). */
@@ -262,6 +273,10 @@ final class DeckView extends LinearLayout {
             old.animate().alpha(0f).setDuration(180).withEndAction(() -> old.setVisibility(GONE));
         }
         current = index;
+        // The owner (2026-11-03): the map takes as much of the deck as it can.
+        boolean mapTab = tabs.get(index) instanceof MapTab;
+        content.setPadding(dp(mapTab ? 4 : 12), dp(mapTab ? 4 : 10), dp(mapTab ? 4 : 12),
+                dp(mapTab ? 4 : 10));
         View now = tabs.get(index).view;
         now.setAlpha(0f);
         now.setVisibility(VISIBLE);
@@ -1743,7 +1758,9 @@ final class DeckView extends LinearLayout {
                 maxY = Math.max(maxY, p[1]);
             }
             float pad = dp(40);
-            float legend = dp(30);
+            // The owner (2026-11-03): less dead space - the hint is written over the map's
+            // foot, outlined, instead of under it.
+            float legend = 0f;
             boolean withMap = map != null && mapRight > mapLeft && mapTop > mapBottom
                     && mapWidth > 0 && mapHeight > 0;
             if (withMap) {
@@ -1753,14 +1770,17 @@ final class DeckView extends LinearLayout {
                 maxX = mapRight;
                 minY = mapBottom;
                 maxY = mapTop;
-                pad = dp(6);
+                pad = dp(2);
             }
             float spanX = Math.max(maxX - minX, 20f);
             float spanY = Math.max(maxY - minY, 20f);
             // As the game's map screen shows the area: its map turned by Area.North's
-            // quarter turns anticlockwise (Ostagar's King's Camp, 3: a quarter turn
-            // clockwise - run 471 against the game's own map screen). The markers turn with
-            // it; their icons and names stay upright.
+            // quarter turns clockwise - map.gfx sets MapMovieClip._rotation to 0, 90, 180 or
+            // 270 for North 0 to 3, and Flash turns clockwise. This turned them anticlockwise
+            // until the owner saw Ostagar upside down (2026-11-03: the King's Camp, North 3,
+            // matched the game's map screen only turned 180 degrees, 0.71 against 0.29-0.38 for
+            // every other turn and mirror); run 471 had compared an east-west road, which a
+            // half turn keeps. The markers turn with it; their icons and names stay upright.
             final int turns = withMap ? quarterTurns : 0;
             final boolean sideways = (turns & 1) != 0;
             float scale = Math.min((getWidth() - 2 * pad) / (sideways ? spanY : spanX),
@@ -1779,7 +1799,7 @@ final class DeckView extends LinearLayout {
             final float midX = (minX + maxX) / 2;
             final float midY = (minY + maxY) / 2;
             final float drawScale = scale;
-            final float degrees = -90f * turns;  // the canvas turns clockwise
+            final float degrees = 90f * turns;  // the canvas turns clockwise
             final double radians = Math.toRadians(degrees);
             final float cos = (float) Math.cos(radians);
             final float sin = (float) Math.sin(radians);

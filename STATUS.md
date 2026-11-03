@@ -1917,6 +1917,12 @@ Newest first. One short entry per session: what changed, what's next.
   owner asked; not kept or published), and its launcher updated it to the real 0.1.4 from
   GitHub (14:54, `back from Android's installer - waiting for its answer`, then 0.1.4 the
   newest). **0.1.5-alpha** released with the fix (the tag `v0.1.5-alpha`).
+- **BUG-115:** the deck's map upside down at the King's Camp (the owner's screenshots of both
+  screens): map.gfx turns the map clockwise by North's quarter turns, the deck turned it
+  anticlockwise - right for North 0 and 2 only. Measured by correlation over the eight turns
+  and mirrors, before (0.71 only at 180 degrees) and after (run 684: 0.77 unturned). With it
+  (the owner): the map nearly fills the tab, its hint over it, and the deck's footer gone while
+  connected. Committed, not released.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

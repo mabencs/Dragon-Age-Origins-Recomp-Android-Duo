@@ -372,7 +372,7 @@ the game. Tap the tabs along the top.
 | **Party** | Each member's portrait, name, class, health, and mana or stamina, with level-up, poison and paralysis marked. |
 | **Quickbar** | The selected character's quick slots, large enough for a thumb. A tap uses the slot, as its button would (in exploration and combat). |
 | **Quests** | The journal's two pages, current and completed quests, in the game's groups. A tap unfolds a group, and a quest for its text. |
-| **Map** | The area, north up: the party, and each place and person as an icon of what it is - a moneybag for a merchant, an anvil for a smith, an exclamation mark for a quest giver, a door for an exit. A tap on an icon shows its name; tap again to hide it. Pinch to zoom, drag to pan. |
+| **Map** | The area, turned as the game's own map screen shows it: the party, and each place and person as an icon of what it is - a moneybag for a merchant, an anvil for a smith, an exclamation mark for a quest giver, a door for an exit. A tap on an icon shows its name; tap again to hide it. Pinch to zoom, drag to pan. |
 | **Tactics** | Each member's tactics slots: condition, command and target. |
 | **Codex** | The codex entries you have found, by category: a tap unfolds a category, and an entry to read it. The journal's conversations below. |
 | **Items** | What each member wears, the backpack, and the purse. A tap shows an item's stats, properties, requirements and text. **Equip**, **Use** and **Unequip** act for the character selected in the game (in exploration and combat). |

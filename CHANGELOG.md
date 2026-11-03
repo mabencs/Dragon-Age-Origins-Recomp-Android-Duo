@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **The deck's map was upside down in some areas**, the King's Camp at Ostagar among them. It
+  is now turned the way the game's own map screen shows it, in every area.
+
+### Changed
+
+- **The deck's map is bigger:** it takes nearly the whole tab, with its hint written over it.
+- **The line at the bottom of the deck** (the game's title and a count of values) is gone. It
+  appears only while the deck waits for the game.
+
 ## 0.1.5-alpha - "Open Alpha"
 
 ### Fixed
