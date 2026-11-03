@@ -942,6 +942,10 @@ PPC_FUNC(__imp__MmQueryStatistics) {
 // rather than Xenia's chosen one - the device has a clock of its own. Sizes are what
 // the title passes for each id, which is what the real kernel's table holds. An id
 // not listed is refused and logged: it is the next value to find out.
+namespace warden {
+bool VideoFourByThree();  // warden_video.cc: the 4:3 test
+}  // namespace warden
+
 PPC_FUNC(__imp__ExGetXConfigSetting) {
   const uint32_t category = ctx.r3.u32 & 0xFFFF;
   const uint32_t setting = ctx.r4.u32 & 0xFFFF;
@@ -1001,6 +1005,9 @@ PPC_FUNC(__imp__ExGetXConfigSetting) {
       std::memcpy(base + buffer, found->text, std::strlen(found->text));
     } else if (found->size == 1) {
       base[buffer] = uint8_t(found->value);
+    } else if (category == 3 && setting == 0x0A && warden::VideoFourByThree()) {
+      // The 4:3 test: the console's video flags without widescreen.
+      PPC_STORE_U32(buffer, 0);
     } else if (category == 3 && setting == 0x09) {
       // PLAN 10.16: the Language option (files/language) - the disc carries English,
       // Spanish and Italian text (its voices are English): the console's 1, 5 and 6.

@@ -1941,6 +1941,10 @@ Newest first. One short entry per session: what changed, what's next.
   is made afresh after its display went. Run 691: no listing, 14.2 dB for 15 to 8, the owner's
   case right, held volume-up at the top no louder, the deck back after Home and a wake; frame
   times as before.
+- **PLAN 9.22 (tested, not built):** 4:3 screens. Told a 4:3 mode, the game draws at 4:3 and lays
+  out its HUD, menus and conversations inside the 4:3 frame (runs 692-694, 960x720 and 1280x960,
+  both in the EDRAM in one tile; 62-64 and about 44 fps at the camp on the Thor). The test
+  switches `files/hack-video-mode WxH 4:3` and `files/resolution 960x720|1280x960` are kept.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

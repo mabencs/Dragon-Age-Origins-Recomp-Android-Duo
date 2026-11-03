@@ -135,6 +135,10 @@ extern "C" uint32_t warden_frame_callbacks_posted();
 extern "C" uint32_t warden_deferred_paint_requests_dropped();
 extern "C" uint32_t warden_deferred_paint_requests();
 
+namespace warden {
+bool VideoFourByThree();  // warden_video.cc: the 4:3 test
+}  // namespace warden
+
 namespace warden::gpu {
 
 namespace {
@@ -879,6 +883,12 @@ bool Start(xe::Memory& memory, xe::ui::WindowedAppContext* app_context,
     return false;
   }
   g_memory = &memory;
+  // The 4:3 test (files/hack-video-mode "WxH 4:3"): the presenter's letterbox at 4:3, as the
+  // title's output then is.
+  if (warden::VideoFourByThree()) {
+    graphics->SetScaledAspectRatio(4, 3);
+    XELOGW("GPU: the presenter shows the title at 4:3 (files/hack-video-mode)");
+  }
   g_graphics = std::move(graphics);
   // PLAN 9.4: FSR 3.1 brought up on the game's device - a test while it is being built
   // (files/fsr3-probe).

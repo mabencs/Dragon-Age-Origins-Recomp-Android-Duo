@@ -61,6 +61,9 @@ void PresetGpuRegisters(uint8_t* base) {
 struct VideoSize {
   uint32_t width = 1280;
   uint32_t height = 720;
+  // The 4:3 test (the owner, 2026-11-03): "WxH 4:3" - a mode that is not widescreen, and
+  // not HD below 720 lines, as a 4:3 television's.
+  bool four_by_three = false;
 };
 
 const VideoSize& DisplaySize() {
@@ -70,14 +73,16 @@ const VideoSize& DisplaySize() {
     if (FILE* file = dir ? std::fopen((std::string(dir) + "/hack-video-mode").c_str(), "r")
                          : nullptr) {
       unsigned width = 0, height = 0;
-      if (std::fscanf(file, "%ux%u", &width, &height) == 2 && width >= 320 && height >= 180 &&
-          width <= 1920 && height <= 1080) {
+      char shape[8] = {};
+      const int read = std::fscanf(file, "%ux%u %7s", &width, &height, shape);
+      if (read >= 2 && width >= 320 && height >= 180 && width <= 1920 && height <= 1080) {
         told.width = width;
         told.height = height;
       }
+      told.four_by_three = read == 3 && std::strcmp(shape, "4:3") == 0;
       std::fclose(file);
-      XELOGW("video mode: the title is told {}x{} (files/hack-video-mode)", told.width,
-             told.height);
+      XELOGW("video mode: the title is told {}x{}{} (files/hack-video-mode)", told.width,
+             told.height, told.four_by_three ? ", 4:3, not widescreen" : "");
     }
     return told;
   }();
@@ -85,6 +90,15 @@ const VideoSize& DisplaySize() {
 }
 uint32_t DisplayWidth() { return DisplaySize().width; }
 uint32_t DisplayHeight() { return DisplaySize().height; }
+}  // namespace
+
+namespace warden {
+// The 4:3 test: the title told a 4:3 mode (warden_gpu.cc's presenter aspect, the console's
+// video flags in warden_imports_kernel.cc).
+bool VideoFourByThree() { return DisplaySize().four_by_three; }
+}  // namespace warden
+
+namespace {
 constexpr uint32_t kVideoStandardNtscM = 1;
 
 std::mutex g_video_mutex;
@@ -180,15 +194,16 @@ void WriteVideoMode(uint8_t* base, uint32_t address) {
   PPC_STORE_U32(address + 0, DisplayWidth());
   PPC_STORE_U32(address + 4, DisplayHeight());
   PPC_STORE_U32(address + 8, 0);   // not interlaced
-  PPC_STORE_U32(address + 12, 1);  // widescreen
-  PPC_STORE_U32(address + 16, 1);  // hi-def
+  const bool four_by_three = DisplaySize().four_by_three;
+  PPC_STORE_U32(address + 12, four_by_three ? 0 : 1);  // widescreen
+  PPC_STORE_U32(address + 16, DisplayHeight() >= 720 ? 1 : 0);  // hi-def
   const float refresh = 60.0f;
   uint32_t refresh_bits;
   std::memcpy(&refresh_bits, &refresh, sizeof(refresh_bits));
   PPC_STORE_U32(address + 20, refresh_bits);
   PPC_STORE_U32(address + 24, kVideoStandardNtscM);
   PPC_STORE_U32(address + 28, 0x8A);  // pixel rate, as Xenia reports it
-  PPC_STORE_U32(address + 32, 1);     // widescreen flag: 1 widescreen, 3 not
+  PPC_STORE_U32(address + 32, four_by_three ? 3 : 1);  // widescreen flag: 1 widescreen, 3 not
 }
 
 }  // namespace
@@ -210,7 +225,8 @@ PPC_FUNC(__imp__VdQueryVideoMode) {
 // DWORD VdQueryVideoFlags()  - 1 widescreen, 2 at least 720p, 4 at least 1080p.
 PPC_FUNC(__imp__VdQueryVideoFlags) {
   (void)base;
-  ctx.r3.u64 = 1 | 2 | (DisplayWidth() >= 1920 ? 4 : 0);  // HD whatever the experiment tells
+  ctx.r3.u64 = (DisplaySize().four_by_three ? 0 : 1) | (DisplayHeight() >= 720 ? 2 : 0) |
+                (DisplayWidth() >= 1920 ? 4 : 0);
 }
 
 // void VdGetCurrentDisplayGamma(DWORD* type, float* power)

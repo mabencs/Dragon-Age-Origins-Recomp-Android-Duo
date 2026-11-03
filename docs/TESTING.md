@@ -465,6 +465,12 @@ files/audio-dump.wav > build/audioN.wav` (1.15 MB a second) and delete it after.
 the candidate mixdowns; `--render` runs the recording through the device's own mixer
 (`tools/audio_host.cc` with `warden_audio_mix.cc`) and compares the speakers' output with
 the headphones'.
+**4:3** (PLAN 9.22, a test): `files/hack-video-mode` holding `960x720 4:3` (or `1280x960 4:3`)
+tells the title a 4:3 mode that is not widescreen and shows it at 4:3 (the log: `video mode:
+the title is told ..., 4:3, not widescreen`, `GPU: the presenter shows the title at 4:3`), and
+`files/resolution` holding `960x720` or `1280x960` makes the device at that size; FSR 3.1 and
+frame generation off. On the Thor's 16:9 screen the picture is pillarboxed. Remove all of them
+after.
 **Upscaling** (9.5, 9.7): `files/upscaling` holds `fxaa`, `fsr` or `cas` (none: bilinear), set on the
 presenter as the title boots (the log: `GPU: upscaling ...`). The guest output captures
 are taken before it: to see it, `adb exec-out screencap -p` the panel.

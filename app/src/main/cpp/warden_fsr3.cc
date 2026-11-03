@@ -115,6 +115,14 @@ void RenderSize(uint32_t& width, uint32_t& height) {
     if (!std::strcmp(resolution, "1360x768")) {
       return Size{1360, 768};
     }
+    // The 4:3 test (files/hack-video-mode "WxH 4:3"): 4:3 sizes, in the EDRAM in one tile -
+    // 960x720 540 tiles of 80x16, 1280x960 960 (of the 1,024 the layout gives each).
+    if (!std::strcmp(resolution, "960x720")) {
+      return Size{960, 720};
+    }
+    if (!std::strcmp(resolution, "1280x960")) {
+      return Size{1280, 960};
+    }
     // Above 1280x720 the game's layout of the EDRAM does not fit (its depth at 0 and its
     // colour at 1024 for every pass; at 1920x1080 each needs 1,632 tiles): the device at
     // half the size, rendered at twice it (RenderScale).

@@ -2660,6 +2660,26 @@ behind the owner's (CLAUDE.md).
       format and size), so it switches at once and works with FSR 3.1 on or off. Run 678
       (off from the start): the corners as bright as the rest; run 679 (on): the vignette.
       With the vignette off, BUG-113's shade has nothing to find in the corners.
+- [ ] 9.22 **4:3 screens (the owner asked, 2026-11-03: the Retroid Pocket Nova's 1280x960 and
+      the like) - tested, not built (session 43, runs 692-694).** Today a 4:3 screen shows the
+      16:9 picture letterboxed (Xenia's presenter keeps the guest's aspect). **The game has a
+      true 4:3 mode:** told a mode that is not widescreen (`files/hack-video-mode` holding
+      `960x720 4:3` or `1280x960 4:3`: X_VIDEO_MODE's widescreen 0 and flag 3, VdQueryVideoFlags
+      and the console's video flags without widescreen, the presenter's aspect 4:3) and its
+      device made at a 4:3 size (`files/resolution` 960x720 or 1280x960, the test sizes; both fit
+      the EDRAM's layout in one tile - 540 and 960 tiles of the 1,024 each target gets), it draws
+      the King's Camp at 4:3 with the vertical view kept and the sides narrower (no stretch: Jaden
+      220 pixels wide against 210 at 16:9), and lays out its HUD (portrait, minimap, quickbar,
+      level-up bar), the Character Record, the pause menu and a conversation (Daveth: the
+      subtitle in the top bar, five replies) inside the 4:3 frame at their usual size. The game's
+      own device size stays 1280x720 when it is told HD; the device override sets the size. The
+      camp on the Thor (the Nova's chip family), FSR 3.1 and frame generation off: 960x720 about
+      62-64 frames a second, 1280x960 about 38-50. **To build it:** the 4:3 mode from the display's
+      shape (not a test file), 4:3 Rendering resolutions (and 1440x1080 by 2x scaling, as 1080p),
+      FSR 3.1's profiles at 4:3 sizes (80-pixel tile widths), the field of view's 16:9 basis
+      checked, the launcher, options panel and on-screen controller on a 4:3 screen; frame
+      generation follows the guest output's size. The RG477M (Dimensity 8300, Mali) is a separate
+      question - the port has run only on Adreno.
 
 ## Phase 10 — Polish
 
