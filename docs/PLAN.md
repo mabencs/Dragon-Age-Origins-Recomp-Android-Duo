@@ -1600,6 +1600,21 @@ Depends on Phase 6. Full design in [`SECOND-SCREEN.md`](SECOND-SCREEN.md).
       10 for the others), the hint written over the map's foot, and the deck's footer (the
       title and the count of values) gone while the game is connected, on every tab; it says
       only "Waiting for the game…" now. Run 684.
+      **Then (the owner, 2026-11-03): the party smaller, smooth, the controlled member marked.**
+      Party icons 9 dp (13 before), the member the player controls 11 dp with a gold rim and a
+      soft gold halo, drawn last (`Party.Members.N.UserSelected`, which the HUD's portraits
+      observe; LB and RB move it - run 688). Positions are read on their own path every 100 ms
+      ahead of the read jobs (`ReadPositions` in warden_deck.cc: a job of their own had waited
+      behind the journal's long passes, 2.3 reads a second in run 686), about 9 reads a second;
+      the game itself changes them about 6 times a second while walking (run 688: 73 changes in
+      a 12 s walk). The deck glides each member's icon from where it was drawn to the new place
+      over 110 ms, so it moves every frame (run 688's deck recording: in 153 of 260 frames,
+      largest step 5.4 px), snapping on jumps over 15 world units. **The cost** (the new
+      `deck: in 30 s, ...` line): game-thread reads 5.7-6.8 ms a second against 4.0-4.9 before
+      (+1.5-2 ms/s), snapshots 0.17-0.18 ms each, up from about 1 to 6 a second while the party
+      moves (+0.9 ms/s) - about 3 ms a second in all, 0.1 ms a frame at 30 fps, inside the reads'
+      0.5 ms-per-16 ms cap; the frame times unchanged (p50 30.9-32.5 ms, run 686 against 688).
+      The deck already pulled ten times a second, so its own side is unchanged.
 
 ---
 

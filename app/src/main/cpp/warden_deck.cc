@@ -185,9 +185,45 @@ constexpr int64_t kButtonHoldNanos = 150'000'000;    // the button held this lon
 std::atomic<int> g_quick_slot{-1};
 std::atomic<int64_t> g_quick_at{0};  // when the press starts (steady clock, ns)
 
+// The deck's cost on the game's thread, logged every 30 s while it pulls (the owner asked,
+// 2026-11-03, what reading the party ten times a second costs): the reads' time, and the
+// snapshots made - how many, their time, the largest.
+struct DeckCost {
+  Clock::time_point since = Clock::now();
+  Clock::duration reads{};
+  Clock::duration publishing{};
+  uint32_t publishes = 0;
+  size_t largest = 0;
+  uint32_t position_reads = 0;    // ReadPositions' passes
+  uint32_t position_changes = 0;  // the passes that found a member moved
+};
+DeckCost g_cost;
+
+void NoteCost() {
+  const auto now = Clock::now();
+  if (now - g_cost.since < std::chrono::seconds(30)) {
+    return;
+  }
+  const double seconds = std::chrono::duration<double>(now - g_cost.since).count();
+  XELOGI("deck: in {:.0f} s, reads {:.1f} ms ({:.2f} ms/s); {} snapshots ({:.1f}/s) made in "
+         "{:.1f} ms ({:.3f} ms each, the largest {} KB); positions read {} times, {} changed",
+         seconds, std::chrono::duration<double, std::milli>(g_cost.reads).count(),
+         std::chrono::duration<double, std::milli>(g_cost.reads).count() / seconds,
+         g_cost.publishes, g_cost.publishes / seconds,
+         std::chrono::duration<double, std::milli>(g_cost.publishing).count(),
+         g_cost.publishes
+             ? std::chrono::duration<double, std::milli>(g_cost.publishing).count() /
+                   g_cost.publishes
+             : 0.0,
+         g_cost.largest / 1024, g_cost.position_reads, g_cost.position_changes);
+  g_cost = DeckCost{};
+  g_cost.since = now;
+}
+
 // Under m.mutex: the map as one text, handed over if the deck's side is not reading.
 void MaybePublish(Mirror& m) {
   const auto now = Clock::now();
+  NoteCost();
   if (!m.dirty || now - m.last_publish < kPublishEvery) {
     return;
   }
@@ -218,10 +254,13 @@ void MaybePublish(Mirror& m) {
         }
       }
     }
+    g_cost.largest = std::max(g_cost.largest, text->size());
     m.published = std::move(text);
     m.published_mutex.unlock();
     m.dirty = false;
     m.last_publish = now;
+    ++g_cost.publishes;
+    g_cost.publishing += Clock::now() - now;
   }
 }
 
@@ -1374,9 +1413,8 @@ Reads& ReadState() {
       int period_ms;
     } kPatterns[] = {
         // Party: who, what they are, where.
-        {"Party.Members.*.{Name,Tag,IsDead,InCombat,CanLevelUp,WorldPositionX,WorldPositionY,"
-         "WorldOrientationY}",
-         1000},
+        // The positions are read on their own, ten times a second (ReadPositions).
+        {"Party.Members.*.{Name,Tag,IsDead,InCombat,CanLevelUp}", 1000},
         {"Party.Members.*.Stats.{ClassName,RaceName}", 5000},
         {"Party.{InCamp,BackpackSize,BackpackMaxSize,MaxMembers}", 5000},
         // Who the Items tab's buttons act for.
@@ -1465,8 +1503,71 @@ void TakeWatches(Mirror& m, Reads& r) {
   }
 }
 
+// The owner (2026-11-03): the party moving smoothly on the Map tab. Their positions every
+// kPositionsEvery, ahead of the jobs - one in progress (the journal's long lists) held a
+// pattern of them back to 2.3 reads a second (run 686). The members are the ones the party
+// job found (their Name); a member gone loses its position too. A dozen short reads.
+constexpr auto kPositionsEvery = std::chrono::milliseconds(100);
+
+void ReadPositions(Mirror& m, TokenReader& reader) {
+  static Clock::time_point due;
+  const auto now = Clock::now();
+  if (now < due) {
+    return;
+  }
+  due = now + kPositionsEvery;
+  static const char* const kFields[] = {"WorldPositionX", "WorldPositionY", "WorldOrientationY"};
+  static const std::string kPrefix = "Party.Members.";
+  // "Party.Members.N." for each member with a Name; the position keys already held.
+  std::vector<std::string> members;
+  std::vector<std::string> held_positions;
+  for (const auto& [key, value] : m.values) {
+    if (key.compare(0, kPrefix.size(), kPrefix) != 0) {
+      continue;
+    }
+    const size_t dot = key.find('.', kPrefix.size());
+    if (dot == std::string::npos) {
+      continue;
+    }
+    const char* field = key.c_str() + dot + 1;
+    if (std::strcmp(field, "Name") == 0) {
+      members.push_back(key.substr(0, dot + 1));
+    } else if (std::strcmp(field, "WorldPositionX") == 0 ||
+               std::strcmp(field, "WorldPositionY") == 0 ||
+               std::strcmp(field, "WorldOrientationY") == 0) {
+      held_positions.push_back(key);
+    }
+  }
+  std::string text;
+  bool moved = false;
+  for (const std::string& member : members) {
+    for (const char* field : kFields) {
+      if (!reader.Text(member + field, &text)) {
+        continue;
+      }
+      std::string& held = m.values[member + field];
+      if (held != text) {
+        held = text;
+        m.dirty = true;
+        moved = true;
+      }
+    }
+  }
+  ++g_cost.position_reads;
+  g_cost.position_changes += moved ? 1 : 0;
+  // A member gone from the party (no Name any more) takes its position with it.
+  for (const std::string& key : held_positions) {
+    const size_t dot = key.find('.', kPrefix.size());
+    if (!m.values.count(key.substr(0, dot + 1) + "Name")) {
+      m.values.erase(key);
+      m.dirty = true;
+    }
+  }
+}
+
 // Under m.mutex, on the game's thread: some of the deck's reads, within the budget.
 void ReadSome(Mirror& m, TokenReader& reader) {
+  ReadPositions(m, reader);
   Reads& r = ReadState();
   TakeWatches(m, r);
   const auto now = Clock::now();
@@ -1710,7 +1811,9 @@ WARDEN_OVERRIDE(tu6_sub_825DCFF0) {
       if (mode != m.values.end() && (mode->second == "0" || mode->second == "1" ||
                                      mode->second == "3" || mode->second == "4")) {
         warden::deck::TokenReader reader(ctx, base);
+        const auto read_start = Clock::now();
         warden::deck::ReadSome(m, reader);
+        warden::deck::g_cost.reads += Clock::now() - read_start;
         warden::deck::MaybePublish(m);
       }
     }

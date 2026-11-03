@@ -1405,6 +1405,7 @@ final class DeckView extends LinearLayout {
 
         private final Paint badge = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint halo = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glyph = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glyphLine = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint cut = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1419,6 +1420,16 @@ final class DeckView extends LinearLayout {
         private final List<String> names = new ArrayList<>();
         private final List<Integer> kinds = new ArrayList<>();
         private final List<Integer> glyphs = new ArrayList<>();
+        // The owner (2026-11-03): the party moving smoothly. Their positions come ten times a
+        // second (warden_deck.cc); each member's icon glides from where it was drawn to the new
+        // place over GLIDE_MS, so it moves on every frame between two reads. A jump longer
+        // than GLIDE_SNAP world units (a new area, a teleport) is taken at once.
+        private static final long GLIDE_MS = 110;
+        private static final float GLIDE_SNAP = 15f;
+        private final List<Integer> members = new ArrayList<>();
+        private final java.util.HashMap<Integer, float[]> glideFrom = new java.util.HashMap<>();
+        private final java.util.HashMap<Integer, float[]> shownAt = new java.util.HashMap<>();
+        private long glideStart;
         /** Where each marker was last drawn, for the taps. */
         private final List<float[]> drawn = new ArrayList<>();
         /** The markers whose names are shown, by kind and name (they keep it while the area does). */
@@ -1537,31 +1548,46 @@ final class DeckView extends LinearLayout {
                     });
                 }, "deck-map").start();
             }
+            // The member the player controls: the HUD's portraits observe it
+            // (Party.Members.N.UserSelected, as the Party tab reads it).
+            int selected = -1;
+            for (int m : indices(values, "Party.Members.")) {
+                if ("1".equals(values.get("Party.Members." + m + ".UserSelected"))) {
+                    selected = m;
+                }
+            }
             String key = subtree(values, "MapNoteList.MapNotes.")
-                    + subtree(values, "Journal.PlotGivers.") + positions(values) + subtree(values, "Area.");
+                    + subtree(values, "Journal.PlotGivers.") + positions(values) + subtree(values, "Area.")
+                    + "\tselected " + selected;
             if (key.equals(shownKey)) {
                 return;
             }
             shownKey = key;
+            glideFrom.clear();
+            glideFrom.putAll(shownAt);
+            glideStart = android.os.SystemClock.uptimeMillis();
             points.clear();
             names.clear();
             kinds.clear();
             glyphs.clear();
+            members.clear();
             for (int note : indices(values, "MapNoteList.MapNotes.")) {
                 String prefix = "MapNoteList.MapNotes." + note + ".";
                 String name = orEmpty(values.get(prefix + "MapNote"));
                 if (name.isEmpty()) {
                     name = orEmpty(values.get(prefix + "Name"));
                 }
-                add(values, prefix, name, 0, noteGlyph(orEmpty(values.get(prefix + "Icon")), name));
+                add(values, prefix, name, 0, noteGlyph(orEmpty(values.get(prefix + "Icon")), name), -1);
             }
             for (int g : indices(values, "Journal.PlotGivers.")) {
                 String prefix = "Journal.PlotGivers." + g + ".";
-                add(values, prefix, orEmpty(values.get(prefix + "PlaceableName")), 1, GLYPH_EXCLAIM);
+                add(values, prefix, orEmpty(values.get(prefix + "PlaceableName")), 1, GLYPH_EXCLAIM, -1);
             }
             for (int m : indices(values, "Party.Members.")) {
                 String prefix = "Party.Members." + m + ".";
-                add(values, prefix, orEmpty(values.get(prefix + "Name")), 2, GLYPH_PERSON);
+                // Kind 3: the member the player controls, drawn last and marked.
+                add(values, prefix, orEmpty(values.get(prefix + "Name")), m == selected ? 3 : 2,
+                        GLYPH_PERSON, m);
             }
             invalidate();
         }
@@ -1640,7 +1666,8 @@ final class DeckView extends LinearLayout {
             return out.toString();
         }
 
-        private void add(Map<String, String> values, String prefix, String name, int kind, int icon) {
+        private void add(Map<String, String> values, String prefix, String name, int kind, int icon,
+                int member) {
             String x = values.get(prefix + "WorldPositionX");
             String y = values.get(prefix + "WorldPositionY");
             if (x == null || y == null) {
@@ -1650,10 +1677,11 @@ final class DeckView extends LinearLayout {
             names.add(name);
             kinds.add(kind);
             glyphs.add(icon);
+            members.add(member);
         }
 
         private String openKey(int i) {
-            return kinds.get(i) + "\t" + names.get(i);
+            return Math.min(kinds.get(i), 2) + "\t" + names.get(i);
         }
 
         @Override
@@ -1827,11 +1855,30 @@ final class DeckView extends LinearLayout {
                 canvas.restore();
             }
             // The icons: the notes first, the quest givers over them, the party on top.
+            float glide = Math.min(1f,
+                    (android.os.SystemClock.uptimeMillis() - glideStart) / (float) GLIDE_MS);
             for (int i = 0; i < points.size(); i++) {
-                drawn.add(onScreen.apply(points.get(i)[0], points.get(i)[1]));
+                float[] at = points.get(i);
+                int member = members.get(i);
+                if (member >= 0) {
+                    float[] from = glideFrom.get(member);
+                    float x = at[0], y = at[1];
+                    if (from != null && glide < 1f
+                            && Math.hypot(at[0] - from[0], at[1] - from[1]) < GLIDE_SNAP) {
+                        x = from[0] + (at[0] - from[0]) * glide;
+                        y = from[1] + (at[1] - from[1]) * glide;
+                    }
+                    shownAt.put(member, new float[] {x, y});
+                    drawn.add(onScreen.apply(x, y));
+                } else {
+                    drawn.add(onScreen.apply(at[0], at[1]));
+                }
+            }
+            if (glide < 1f) {
+                postInvalidateOnAnimation();
             }
             spread();
-            for (int pass = 0; pass < 3; pass++) {
+            for (int pass = 0; pass < 4; pass++) {
                 for (int i = 0; i < points.size(); i++) {
                     if (kinds.get(i) == pass) {
                         float[] at = drawn.get(i);
@@ -1922,8 +1969,8 @@ final class DeckView extends LinearLayout {
                         float push = least - distance;
                         float ux = dx / distance;
                         float uy = dy / distance;
-                        boolean aStays = kinds.get(i) == 2 && kinds.get(j) != 2;
-                        boolean bStays = kinds.get(j) == 2 && kinds.get(i) != 2;
+                        boolean aStays = kinds.get(i) >= 2 && kinds.get(j) < 2;
+                        boolean bStays = kinds.get(j) >= 2 && kinds.get(i) < 2;
                         float aShare = aStays ? 0f : bStays ? 1f : 0.5f;
                         float bShare = 1f - aShare;
                         a[0] -= ux * push * aShare;
@@ -1940,18 +1987,23 @@ final class DeckView extends LinearLayout {
         }
 
         private float iconRadius(int kind) {
-            return dp(kind == 2 ? 13 : 12);
+            return dp(kind == 3 ? 11 : kind == 2 ? 9 : 12);
         }
 
         /** A marker: a dark disc, its rim the kind's colour (brighter when open), its glyph. */
         private void drawIcon(Canvas canvas, int kind, int which, float x, float y, boolean open) {
             float r = iconRadius(kind);
-            int colour = kind == 2 ? HEALTH : kind == 1 ? BRASS : PARCHMENT;
+            int colour = kind == 3 ? 0xFFF2D27A : kind == 2 ? HEALTH : kind == 1 ? BRASS : PARCHMENT;
+            if (kind == 3) {
+                // The member the player controls: a soft gold halo around a gold rim.
+                halo.setColor(0x66F2D27A);
+                canvas.drawCircle(x, y, r + dp(4), halo);
+            }
             canvas.drawCircle(x, y, r, badge);
             rim.setColor(open ? 0xFFF4E3B0 : colour);
-            rim.setStrokeWidth(open ? dp(2.5f) : dp(1.5f));
+            rim.setStrokeWidth(open || kind == 3 ? dp(2.5f) : dp(1.5f));
             canvas.drawCircle(x, y, r - dp(1), rim);
-            glyph.setColor(kind == 2 ? 0xFFE8B4A8 : colour);
+            glyph.setColor(kind == 3 ? 0xFFFFF0C8 : kind == 2 ? 0xFFE8B4A8 : colour);
             glyphLine.setColor(glyph.getColor());
             canvas.save();
             canvas.translate(x, y);

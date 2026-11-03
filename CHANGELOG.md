@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **The party on the deck's map:** smaller icons that move smoothly as the party walks, and the
+  character you control marked with a gold ring (it follows when you switch characters).
+
 ## 0.1.6-alpha - "Open Alpha"
 
 ### Fixed

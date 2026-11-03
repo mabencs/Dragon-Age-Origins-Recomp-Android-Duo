@@ -83,6 +83,7 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-116](#bug-116) | the device's firmware (AYN Thor) / our app | high | **OPEN** | The game's volume does not follow Android's: AYN gives apps on the second screen their own volume, and the deck puts the game there. Held volume-up past the top raises it further; with the deck off, the media volume is applied twice |
 | [BUG-115](#bug-115) | our app (the deck's Map tab, PLAN 8.4) | medium | **FIXED** | The deck's map was upside down against the game's map screen in every area whose North is 1 or 3 (the King's Camp): it was turned anticlockwise, the game turns clockwise |
 | [BUG-114](#bug-114) | our app (the update, PLAN 13.1) | high | **FIXED** (0.1.5-alpha) | The launcher's update failed after Android's Install: the launcher, back in front, abandoned the session Android was installing - "the install was cancelled". In 0.1.2 to 0.1.4; mostly fails, sometimes wins |
 | [BUG-113](#bug-113) | our runtime (FSR 3.1's composite, frame generation's UI paste) | medium | **FIXED** | With FSR 3.1 the upper corners of the world juddered: the game's corner vignette, drawn after the capture, counted as UI, so the corners showed the jittered render-size frame |
@@ -2938,6 +2939,46 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-116
+**The game's volume not fully following Android's**
+The device's firmware (AYN Thor) and our app (`GameActivity.reportMediaVolume`, BUG-109's
+workaround) · severity high · **OPEN** session 43
+
+**What it looks like** (the owner, 2026-11-03): with Android's media volume at its top, holding
+volume-up makes the game louder still - most of all after putting the game away, muting, and
+coming back at a partial volume.
+
+**Cause - AYN's second-screen volume.** The Thor's firmware gives apps on the second screen a
+volume of their own. AYN's Game Assistant (`com.ro.gameassistant.service.MultiDisplayVolumeControl`)
+lists the uid of every app with a task on the second display in the property `sys.audio.uids`
+and calls `setStreamVolume` to have it applied; AYN's `libaudioflinger.so` then gives those
+uids' sound the second screen's level (`Settings.System secondary_screen_volume_level`) in
+place of the media volume. AYN's `PhoneWindowManager` also broadcasts each volume key
+(`action.volume.key.event`) and skips its own handling while `persist.sys.volume.skip` is 1.
+The deck is an activity on the second screen, so the game's uid is listed (run 689:
+`sys.audio.uids` 10164, DAO Debug's) - that is BUG-109's cause: the media volume does not reach
+the game's track because the second screen's level is applied to it instead.
+
+Measured (AudioFlinger's power log of the primary output, before the hardware):
+- **Listed, media 15:** second screen 15 -41.6 dB, 8 -54.1 dB (Android's curve for 8 is -13),
+  0 -49.3 dB, 15 again -41.3 dB. The app's own gain (BUG-109) follows the media volume in every
+  step, including a resume (run 689's steps), and is 1.0 at the top.
+- **The owner's case:** muting with the volume key while the game is away (not listed) drags the
+  second screen's level down to 0 with the media volume; raising the media volume after does not
+  raise it again (media 3, second screen 0). Back in the game, the game's sound has the media
+  volume (the app's gain) and the second screen's lower level too; held volume-up at the top
+  raises the second screen's level - the "louder than the top".
+- **The deck off (not listed):** Android applies the media volume and the app applies it again:
+  15 to 8 drops the game 27.4 dB, not 13.
+- After a resume by `am start` the deck did not come back (the launcher's own second-screen
+  activity in front), so the game was not listed: the same double volume until it returns.
+
+**Options** (the owner to choose): the deck as a window of the game's (a Presentation on the
+second display, no task there) - the game never listed, Android applies the media volume, the
+app's own gain removed; or the app's gain chosen by whether the game is listed (none when not;
+when listed, the media volume against the second screen's level, which needs that setting to be
+readable by the app and cannot undo a level of 0).
 
 ## BUG-115
 **The deck's map upside down in some areas**

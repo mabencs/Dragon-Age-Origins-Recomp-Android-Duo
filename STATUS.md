@@ -1925,6 +1925,17 @@ Newest first. One short entry per session: what changed, what's next.
   connected. Checked in six more areas by motion (run 685: the walk on the minimap and on the deck
   within 7 degrees; BUGS.md). **0.1.6-alpha** released with it (the tag `v0.1.6-alpha`; the owner
   installs it on the Thor).
+- **PLAN 8.13, more:** the party's icons smaller (9 dp), the controlled member marked (gold rim
+  and halo, from `UserSelected`; LB/RB move it), positions read on their own every 100 ms and
+  glided over 110 ms on the deck. Measured: about 6 fresh positions a second while walking (the
+  game's own rate), at about 3 ms a second of the game's thread (0.1 ms a frame), frame times
+  unchanged (runs 686-688; the `deck: in 30 s` line).
+- **BUG-116 (open):** the game's volume and AYN's second-screen volume. The deck on the second
+  screen puts the game in AYN's `sys.audio.uids`, whose sound gets `secondary_screen_volume_level`
+  instead of the media volume (BUG-109's real cause); muting while away drags that level to 0,
+  and held volume-up at the top raises it again. With the deck off the media volume is applied
+  twice (27 dB for 15 to 8). Measured with AudioFlinger's power log (runs 689-690). The fix waits
+  on the owner: the deck as a Presentation (Route B, never listed) or the gain chosen by listing.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 
