@@ -6,8 +6,8 @@ starts by re-deriving context that was already paid for.
 
 | | |
 |---|---|
-| **Last updated** | 2026-11-02 (session 42) |
-| **Version** | **0.1.2-alpha, "Open Alpha"** (`CHANGELOG.md`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
+| **Last updated** | 2026-11-03 (session 43) |
+| **Version** | **0.1.3-alpha, "Open Alpha"** (`CHANGELOG.md`; built, not yet published - the owner reviews the changelog first), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
 | **Next action** | **Published** (2026-11-02): https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo, the 0.1.0-alpha APK on its Releases page. Next: what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
@@ -1867,12 +1867,37 @@ Then continue from **Next action** at the top of this file.
 
 Newest first. One short entry per session: what changed, what's next.
 
-### 2026-11-03 (session 42, later) - two apps on the Thor
+### 2026-11-03 (session 43) - two apps on the Thor; the Map tab; release notes; custom drivers tried and dropped; BUG-112, BUG-113
 
 - The published 0.1.2-alpha is installed on the Thor beside the debug app: the owner plays on
   it, and the debug app is for fixing bugs. The debug build is now named **DAO Debug** on the
   home screen (`app/build.gradle.kts`), so the two can be told apart. Scripts and tests touch
   the debug app only.
+- **PLAN 8.13:** the Map tab's markers as icons of what they are, a tap for the name, pinch
+  zoom and pan, outlined text (the owner asked three times over; checked with raw two-finger
+  events on the second screen's panel, `/dev/input/event5`, and screenshots).
+- **PLAN 13.1:** the release notes in a dialog before an update downloads.
+- **Custom Vulkan drivers (Mesa's Turnip) built, tested and dropped** the same day (DECISIONS
+  D16): the loader and the driver packages are gone from the tree. The T30 driver ran the camp
+  ~16 ms a frame slower than the system driver at every resolution; the GPU status line now
+  counts the host's waits, passes, barriers, submits and presents per tick, which showed no host
+  wait and the GPU 78% busy - Turnip serializing Xenia's ~57 passes and ~115 barriers a frame.
+- **BUG-112:** FSR 3.1 failing to come up left its jitter on - the whole world juddering under
+  a still HUD. `Unavailable()` turns the jitter off with the upscaler; kept for any device.
+- **BUG-113:** the upper corners juddering with FSR 3.1 on (the owner, the camp): the game's
+  corner vignette, drawn after the capture, counted as UI, so the composite pasted the jittered
+  render-size frame there. A darkening that is the scene times one grey factor is now a shade,
+  the factor put on the upscaled scene, and on the generated scene in frame generation's UI
+  paste. `fsr3-show-ui` paints a shade blue (runs 672 red, 673 blue). The still camp recorded
+  for 6 s, the mean change per frame of the outer 40-px bands: before, FSR 3.1 on, 0.4-1.4
+  with the centre at 0.07 (runs 668, 670); after, 0.01-0.19 (runs 674, 676), as with FSR 3.1
+  off (669, 675).
+- **PLAN 9.21:** the corner vignette as a live switch (Corner vignette, `files/vignette`):
+  its draw found in the camp's frame trace (run 677: PS `138D82BC28F866CC`, the texture
+  `da_vignette` 256x512 DXT5 - the PC mod "Vignette Be Gone" blanks that texture; the owner's
+  copy was a pointer only, nothing of it in the repo) and dropped in the command processor
+  while off. Run 678 off, 679 on, 680 switched off live through the panel.
+- Uncommitted until the owner's go-ahead.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

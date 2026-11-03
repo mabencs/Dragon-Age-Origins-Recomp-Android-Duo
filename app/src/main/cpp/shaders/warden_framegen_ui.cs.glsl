@@ -52,6 +52,32 @@ vec3 ApplyRamp(vec3 color) {
               float(warden_ramp.entries[index.b] & 1023u)) / 1023.0;
 }
 
+// The real frame's scene before its UI at the destination's size, before the ramp: in
+// mode 1 the image the generator was given (binding 0, the guest output's size); in mode 2
+// the render-size one, the destination pixel's render pixel.
+vec3 SceneAtDest(ivec2 id) {
+  if (warden_ui.mode == 1u) {
+    return texelFetch(warden_hudless, id, 0).rgb;
+  }
+  vec2 uv = (vec2(id) + 0.5) / vec2(warden_ui.dest_size);
+  ivec2 p = clamp(ivec2(uv * warden_ui.render_size), ivec2(0),
+                  ivec2(warden_ui.render_size) - 1);
+  return texelFetch(warden_hudless_render, p, 0).rgb;
+}
+
+// The real frame's UI over the generated scene: the generated frame's pixel, the real
+// frame's, the real frame's scene before its UI (all after the ramp), the UI's opacity.
+vec3 Over(vec3 generated, vec3 real, vec3 scene, float ui) {
+  const vec3 kLuminance = vec3(0.299, 0.587, 0.114);
+  float scene_luminance = dot(scene, kLuminance);
+  float factor = clamp(dot(real, kLuminance) / max(scene_luminance, 1.0 / 255.0), 0.0, 1.0);
+  vec3 off = abs(real - scene * factor);
+  if (scene_luminance > 0.02 && max(off.r, max(off.g, off.b)) < 2.5 / 255.0) {
+    return generated * factor;
+  }
+  return clamp(real + (generated - scene) * (1.0 - ui), 0.0, 1.0);
+}
+
 void main() {
   uvec2 id = gl_GlobalInvocationID.xy;
   if (any(greaterThanEqual(id, warden_ui.dest_size))) {
@@ -73,16 +99,34 @@ void main() {
     difference = max(max(UiDifference(p), UiDifference(p + ivec2(1, 0))),
                      max(UiDifference(p + ivec2(0, 1)), UiDifference(p + ivec2(1, 1))));
   }
-  float ui = clamp(difference * 128.0, 0.0, 1.0);
+  // BUG-113 (the owner, 2026-11-03: judder in the upper corners): the difference taken as
+  // the UI's opacity, not as a yes or no. Any difference over 2/255 used to paste the real
+  // frame's pixel whole, so the soft glows and rims around the portraits and the minimap
+  // - a wide ring of faint UI over the scene - carried the real frame's scene with them,
+  // and that ring stepped at the game's rate against the interpolated picture around it.
+  // A pixel of UI with opacity a over a scene h is front = h (1 - a) + u a; over the
+  // generated scene g it should be g (1 - a) + u a = front + (g - h) (1 - a), which is the
+  // real frame's pixel where the UI is opaque and the generated scene plus the UI's light
+  // where it is faint. The opacity is estimated from the difference, full at a quarter of
+  // the range (the HUD's own colours stand well off the scene).
+  // And a darkening that is the scene times one grey factor - the game's vignette in
+  // the corners, drawn after the capture - is a shade, not UI: the factor goes on the
+  // generated scene (warden_upscale_composite.cs.glsl's Shade), so the corners do not
+  // step at the game's rate.
+  float ui = clamp(difference * 4.0, 0.0, 1.0);
   if (warden_ui.mode == 2u) {
     vec3 generated = ApplyRamp(texelFetch(warden_hudless, ivec2(id), 0).rgb);
     vec3 real = texelFetch(warden_guest_output, ivec2(id), 0).rgb;
-    imageStore(warden_dest, ivec2(id), vec4(mix(generated, real, ui), 1.0));
+    vec3 scene = ApplyRamp(SceneAtDest(ivec2(id)));
+    imageStore(warden_dest, ivec2(id), vec4(Over(generated, real, scene, ui), 1.0));
     return;
   }
   if (ui > 0.0) {
     vec3 generated = imageLoad(warden_dest, ivec2(id)).rgb;
     vec3 real = texelFetch(warden_guest_output, ivec2(id), 0).rgb;
-    imageStore(warden_dest, ivec2(id), vec4(mix(generated, real, ui), 1.0));
+    // The real frame's scene before its UI, as the generator was given it: the same
+    // pixels, the ramp applied.
+    vec3 scene = ApplyRamp(SceneAtDest(ivec2(id)));
+    imageStore(warden_dest, ivec2(id), vec4(Over(generated, real, scene, ui), 1.0));
   }
 }

@@ -91,6 +91,20 @@ vec3 MotionBlur(uvec2 id, vec2 uv, vec3 center) {
   return sum / weight;
 }
 
+// BUG-113 (the owner, 2026-11-03: judder in the upper corners): the game darkens the
+// corners after the image FSR 3.1 receives - a vignette - and that darkening used to
+// count as UI, so the corners showed the final frame at the render size, which moves by
+// the jitter every frame. A darkening that is the scene times one grey factor (the
+// vignette, a dark panel's shade) is a shade, not UI: the factor is put on the upscaled
+// scene instead. The real frame's and the scene's pixels, the factor out.
+bool Shade(vec3 real, vec3 scene, out float factor) {
+  const vec3 kLuminance = vec3(0.299, 0.587, 0.114);
+  float scene_luminance = dot(scene, kLuminance);
+  factor = clamp(dot(real, kLuminance) / max(scene_luminance, 1.0 / 255.0), 0.0, 1.0);
+  vec3 off = abs(real - scene * factor);
+  return scene_luminance > 0.02 && max(off.r, max(off.g, off.b)) < 2.5 / 255.0;
+}
+
 float UiDifference(ivec2 p) {
   p = clamp(p, ivec2(0), ivec2(warden_composite.render_size) - 1);
   vec3 d = abs(texelFetch(warden_final, p, 0).rgb - texelFetch(warden_hudless, p, 0).rgb);
@@ -119,14 +133,24 @@ void main() {
   if (warden_composite.blur_samples != 0u && ui < 1.0) {
     color = MotionBlur(id, uv, color);
   }
+  float shade = 0.0;
   if (ui > 0.0) {
     vec3 final_color =
         textureLod(sampler2D(warden_final, warden_linear), uv, 0.0).rgb;
-    color = mix(color, final_color, ui);
+    vec3 scene_color =
+        textureLod(sampler2D(warden_hudless, warden_linear), uv, 0.0).rgb;
+    float factor;
+    if (Shade(final_color, scene_color, factor)) {
+      color *= factor;
+      shade = 1.0;
+    } else {
+      color = mix(color, final_color, ui);
+    }
   }
   if (warden_composite.show_ui != 0u) {
+    // The UI red, a shade blue.
     float gray = dot(color, vec3(0.299, 0.587, 0.114)) * 0.5;
-    color = mix(vec3(gray), vec3(1.0, 0.0, 0.0), ui);
+    color = mix(vec3(gray), mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.3, 1.0), shade), ui);
   }
   imageStore(warden_dest, ivec2(id), vec4(clamp(color, 0.0, 1.0), 1.0));
 }

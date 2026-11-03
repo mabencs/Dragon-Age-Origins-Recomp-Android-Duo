@@ -720,7 +720,15 @@ public final class GameActivity extends Activity {
 
         @Override
         public void onAppUpdateChosen() {
-            if (appUpdate != null) {
+            if (appUpdate == null) {
+                return;
+            }
+            // The owner (2026-11-03): the release notes first, then the install - or, for
+            // a manual update, the release's page.
+            int state = appUpdate.state();
+            if (state == AppUpdate.AVAILABLE || state == AppUpdate.MANUAL) {
+                showReleaseNotes(state == AppUpdate.AVAILABLE);
+            } else {
                 appUpdate.choose();
             }
         }
@@ -1702,6 +1710,24 @@ public final class GameActivity extends Activity {
      * Immersive fullscreen with the modern API. The deprecated
      * {@code SYSTEM_UI_FLAG_*} route is not used - it is a no-op on API 30+.
      */
+    /** PLAN 13.1: what the update brings, before it is installed (or its page opened). */
+    private void showReleaseNotes(boolean installs) {
+        CharSequence notes = appUpdate.notes();
+        Log.i(TAG, "update: the release notes shown (" + notes.length() + " characters)");
+        new android.app.AlertDialog.Builder(this,
+                android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("What's new in " + appUpdate.version())
+                .setMessage(notes.length() > 0 ? notes : "This release has no notes.")
+                .setPositiveButton(installs ? "Download & install" : "Open the release page",
+                        (d, w) -> {
+                            Log.i(TAG, "update: chosen after the notes");
+                            appUpdate.choose();
+                        })
+                .setNegativeButton("Not now", null)
+                .setOnDismissListener(d -> goFullscreen())
+                .show();
+    }
+
     private void goFullscreen() {
         getWindow().setDecorFitsSystemWindows(false);
         // Ask for the decor view first. getInsetsController() reads it and returns null

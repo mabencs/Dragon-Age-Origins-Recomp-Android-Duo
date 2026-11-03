@@ -11,4 +11,8 @@ namespace warden {
 void SetDynamicShadows(bool on);
 void SetPostProcessing(bool on);
 
+// warden_upscale.cc (PLAN 9.21): the game's corner vignette in play, drawn or skipped, from
+// the next frame.
+void SetVignette(bool on);
+
 }  // namespace warden

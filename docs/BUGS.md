@@ -83,6 +83,8 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-113](#bug-113) | our runtime (FSR 3.1's composite, frame generation's UI paste) | medium | **FIXED** | With FSR 3.1 the upper corners of the world juddered: the game's corner vignette, drawn after the capture, counted as UI, so the corners showed the jittered render-size frame |
+| [BUG-112](#bug-112) | our runtime (FSR 3.1) / a replaceable driver, dropped | medium | **FIXED** (the fallback); the driver work dropped | With FSR 3.1 chosen on a device where its upscaler cannot be made, the jitter stayed on: the whole world juddered under a still HUD. Found with Mesa's Turnip, which the owner then dropped |
 | [BUG-111](#bug-111) | our app (the update, PLAN 13.1) | medium | **FIXED** | Before it shipped: cancelling Android's first install dialog left the launcher's row on Installing for good, ignoring taps |
 | [BUG-110](#bug-110) | our app (the deck, PLAN 8.1) | medium | **FIXED** | Back from sleep, the deck could be missing: the game came back before the second screen, the one try found no display on, and only a new start brought it back |
 | [BUG-109](#bug-109) | the device's firmware (AYN Thor) / our app | high | **WORKED AROUND** | The game's sound did not follow Android's media volume: audible with the media volume at 0. The app now applies the volume itself, on AYN devices |
@@ -2934,6 +2936,62 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-113
+**With FSR 3.1 the upper corners of the world juddered**
+Our runtime (`warden_upscale_composite.cs.glsl`, `warden_framegen_ui.cs.glsl`) · severity
+medium · **FIXED** session 43
+
+**What it looked like** (the owner, 2026-11-03): at the King's Camp, the camera still, the
+scene in the upper left and upper right corners shook; the HUD and the centre did not. With
+frame generation on or off alike.
+
+**Cause.** The game darkens the corners of the frame after the image FSR 3.1 is given (a
+vignette, drawn with the UI). The composite finds the UI by comparing the final frame with
+that image, and took any difference over 2/255 as UI - so in the corners it pasted the final
+frame, which is the render-size frame moved by FSR 3.1's jitter: up to a render pixel each
+frame, with nothing to take it out. `files/fsr3-show-ui` painted both corners red (run 672).
+Frame generation's paste of the real frame's UI onto the generated frames (PLAN 9.14) found the
+same "UI", so there the corners stepped at the game's rate as well. Measured on a 6 s recording
+of the still camp (the mean change per frame of the outer 40-px bands, 0-255): FSR 3.1 on, the
+left bands 0.4-0.7, the right 0.8-1.4, the top 1.0-1.1, the centre 0.07 (runs 668 and 670,
+frame generation on and off); FSR 3.1 off, every band 0.01-0.15 (run 669).
+
+**Fixed.** A pixel where the final frame is the captured scene times one grey factor (within
+2.5/255 in each channel, the scene not near black) is a shade, not UI: the composite puts the
+factor on the upscaled scene, and frame generation's paste puts it on the generated scene
+(`Over`). Anything else that differs is UI as before. Run 673: the corners blue (shade) in
+`fsr3-show-ui`'s view, which now paints a shade blue, the HUD still red. The same recording
+after the fix (runs 674 and 676, frame generation on and off): every outer band 0.01-0.19, the
+centre 0.11-0.16 - the same as with FSR 3.1 off (run 675).
+
+Two things tried first did nothing, because the real frames the dumps hold are the generator's
+sources, without the vignette or the HUD: lsfg-vk's samplers clamped to the edge instead of a
+border colour, and the generator's sources padded by 96 px (both reverted).
+
+## BUG-112
+**With FSR 3.1 chosen but its upscaler not made, the whole world juddered**
+Our runtime (`warden_upscale.cc`) · severity medium · **FIXED** (the fallback) session 43;
+the driver loading it was found with dropped
+
+**What it looked like** (the owner, 2026-11-03): with Mesa's Turnip loaded as the game's Vulkan
+driver (a feature built this session and then dropped - DECISIONS D16), the world shook
+everywhere under a still HUD.
+
+**Cause.** FSR 3.1's SDK failed to make its Vulkan backend on that driver (its memory type
+lookup), and the upscaler was never made - but the jitter the game's projection had been given
+stayed on, moving the scene by up to a render pixel each frame with no upscaler to take it out.
+
+**Fixed.** `Unavailable()`: any failure to make the backend or the upscaler turns the jitter
+off as well (`FSR 3.1: unavailable - the scene is drawn without its jitter, not upscaled`).
+Kept, as it applies to any device where the SDK fails. With it came the SDK's failing Vulkan
+calls logged by name (`FfxLogged`), the device capabilities the SDK chooses its passes by, and
+the GPU status line's new counts (the host's waits for the GPU, the passes and barriers, the
+submits and presents with their time - `docs/TESTING.md`), from the frame-rate investigation
+that followed: Turnip ran the game about 16 ms a frame slower than the system driver at any
+resolution, with no host waits and the GPU 78% busy, which is its serializing of Xenia's ~57
+render passes and ~115 barriers a frame; dropping the buffer barriers gained 2.3 ms, no more.
+The owner dropped the custom-driver feature on that.
 
 ## BUG-111
 **The update row stuck on Installing after a cancel**

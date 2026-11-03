@@ -303,6 +303,18 @@ shows both, with the commit.
 
 ---
 
+## D16 — No replaceable Vulkan driver (2026-11-03)
+
+The owner asked for the loading of a custom Vulkan driver (Mesa's Turnip builds, as
+BOTWRecompAndroid and emulators offer), it was built and tested on the debug app, and then
+dropped the same day: Turnip ran the game about 16 ms a frame slower than the Thor's system
+driver at every resolution - it serializes between Xenia's ~57 render passes and ~115
+barriers a frame, which no setting of ours changes (BUG-112) - and its FSR 3.1 backend did not
+come up. So the app loads the system's driver only, and holds no driver loader or driver
+packages (`*.adpkg.zip` is ignored by git). What the investigation left: the jitter fallback
+when FSR 3.1 cannot be made, and the GPU status line's counts of waits, passes, barriers,
+submits and presents.
+
 ## D15 — The launcher checks for updates (2026-11-02)
 
 The app had no network permission and the README promised it never connected to anything.

@@ -75,6 +75,8 @@ extern "C" void warden_pipeline_statistics(VkDevice device, VkPipeline pipeline,
                                            uint64_t vertex_shader, uint64_t pixel_shader);
 
 // libvulkan's own export: the runtime's vulkan_api.h declares no prototypes.
+extern "C" VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice physical_device, VkPhysicalDeviceMemoryProperties* properties);
 extern "C" VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device,
                                                                        const char* name);
 
@@ -170,6 +172,13 @@ constexpr uint32_t kDofFlagSnap = 1;
 constexpr uint32_t kDofFlagShow = 2;
 // PLAN 9.19: depth of field in conversations and cutscenes, on or off (-1: not read).
 std::atomic<int> g_depth_of_field{-1};
+// PLAN 9.21 (the owner asked, 2026-11-03): the game's corner vignette in play, drawn or
+// not (-1: files/vignette not read). It is a draw of the HUD's - draw 45 of the King's
+// Camp's traced frame (run 677): pixel shader 138D82BC28F866CC, four rectangles blended
+// over the frame with the texture da_vignette, DXT5, 256x512 (the PC mod "Vignette Be
+// Gone" blanks that texture; this drops the draw instead, so it switches at once).
+std::atomic<int> g_vignette{-1};
+constexpr uint64_t kVignetteShader = UINT64_C(0x138D82BC28F866CC);
 // DAORecomp's lens: the blur of a surface at infinity with the lens focused at the near
 // plane, and the most blur, as fractions of the display height, at a 60-degree vertical
 // field of view (narrower shots blur more, by the square root of the zoom).
@@ -434,6 +443,19 @@ std::atomic<bool> g_lanczos_lut{false};
 
 FfxErrorCode LutDeviceCapabilities(FfxInterface* backend, FfxDeviceCapabilities* capabilities) {
   const FfxErrorCode error = g_get_capabilities(backend, capabilities);
+  // BUG-112: what the SDK chooses its passes by, once, and a failure to read it.
+  static bool logged = false;
+  if (error != FFX_OK) {
+    XELOGE("FSR 3.1: the device's capabilities not read ({:08X})", uint32_t(error));
+  } else if (!logged) {
+    logged = true;
+    XELOGI("FSR 3.1: the device - shader model {:X}, waves {}..{}, 16-bit {}, dedicated "
+           "allocation {}, non-uniform storage buffer indexing {}",
+           uint32_t(capabilities->maximumSupportedShaderModel), capabilities->waveLaneCountMin,
+           capabilities->waveLaneCountMax, capabilities->fp16Supported ? "yes" : "no",
+           capabilities->dedicatedAllocationSupported ? "yes" : "no",
+           capabilities->shaderStorageBufferArrayNonUniformIndexing ? "yes" : "no");
+  }
   if (error == FFX_OK && g_lanczos_lut.load(std::memory_order_relaxed)) {
     capabilities->waveLaneCountMin = 32;
     capabilities->waveLaneCountMax = 64;
@@ -486,12 +508,53 @@ FfxErrorCode StatisticsCreatePipeline(FfxInterface* backend, FfxEffect effect, F
   return error;
 }
 
+// BUG-112: the SDK answers any failed Vulkan call with FFX_ERROR_BACKEND_API_ERROR and no
+// more - which call, and what it returned, is logged here: its creation and allocation
+// functions wrapped, a word in the log only when one fails.
+template <typename F, int Slot>
+struct FfxLogged;
+template <typename... A, int Slot>
+struct FfxLogged<VkResult(VKAPI_PTR*)(A...), Slot> {
+  static inline VkResult(VKAPI_PTR* real)(A...) = nullptr;
+  static inline const char* function = nullptr;
+  static VKAPI_ATTR VkResult VKAPI_CALL Call(A... args) {
+    const VkResult result = real(args...);
+    if (result != VK_SUCCESS) {
+      XELOGE("FSR 3.1: {} returned {}", function, int(result));
+    }
+    return result;
+  }
+};
+
+#define WARDEN_FFX_LOGGED(fn, slot)                                                      \
+  if (!std::strcmp(name, #fn)) {                                                         \
+    using Logged = FfxLogged<PFN_##fn, slot>;                                            \
+    Logged::real = reinterpret_cast<PFN_##fn>(vkGetDeviceProcAddr(device, name));        \
+    Logged::function = #fn;                                                              \
+    return Logged::real ? reinterpret_cast<PFN_vkVoidFunction>(&Logged::Call) : nullptr; \
+  }
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL FfxDeviceProcAddr(VkDevice device, const char* name) {
   if (!std::strcmp(name, "vkCreateComputePipelines") && warden_pipeline_statistics_wanted()) {
     g_create_compute_pipelines =
         reinterpret_cast<PFN_vkCreateComputePipelines>(vkGetDeviceProcAddr(device, name));
     return reinterpret_cast<PFN_vkVoidFunction>(StatisticsCreateComputePipelines);
   }
+  WARDEN_FFX_LOGGED(vkCreateDescriptorPool, 1)
+  WARDEN_FFX_LOGGED(vkCreateBuffer, 2)
+  WARDEN_FFX_LOGGED(vkAllocateMemory, 3)
+  WARDEN_FFX_LOGGED(vkMapMemory, 4)
+  WARDEN_FFX_LOGGED(vkBindBufferMemory, 5)
+  WARDEN_FFX_LOGGED(vkCreateDescriptorSetLayout, 6)
+  WARDEN_FFX_LOGGED(vkCreatePipelineLayout, 7)
+  WARDEN_FFX_LOGGED(vkCreateShaderModule, 8)
+  WARDEN_FFX_LOGGED(vkCreateComputePipelines, 9)
+  WARDEN_FFX_LOGGED(vkCreateImage, 10)
+  WARDEN_FFX_LOGGED(vkBindImageMemory, 11)
+  WARDEN_FFX_LOGGED(vkCreateImageView, 12)
+  WARDEN_FFX_LOGGED(vkCreateSampler, 13)
+  WARDEN_FFX_LOGGED(vkAllocateDescriptorSets, 14)
+  WARDEN_FFX_LOGGED(vkCreateBufferView, 15)
   if (!std::strcmp(name, "vkCmdDispatch")) {
     g_pass_timing.dispatch =
         reinterpret_cast<PFN_vkCmdDispatch>(vkGetDeviceProcAddr(device, name));
@@ -715,6 +778,18 @@ class WardenUpscaler::Impl {
   bool jitter_active_ = false;
   uint32_t jitter_index_ = 0;
   float jitter_[2] = {};
+
+  // FSR 3.1 cannot be had on this device: no upscaling, and no jitter either. Left on, the
+  // jitter moved the whole scene by up to a render pixel each frame with nothing to take it
+  // out again - the world juddering under a still HUD (BUG-112: Mesa's Turnip, whose upscaler
+  // was not made).
+  void Unavailable() {
+    failed_ = true;
+    jitter_active_ = false;
+    jitter_[0] = 0.0f;
+    jitter_[1] = 0.0f;
+    XELOGW("FSR 3.1: unavailable - the scene is drawn without its jitter, not upscaled");
+  }
   // The frame being drawn.
   uint32_t render_size_[2] = {};
   uint32_t scene_texture_ = 0;
@@ -1850,7 +1925,7 @@ bool WardenUpscaler::Impl::EnsureContext(uint32_t render_width, uint32_t render_
                           FFX_FSR3UPSCALER_CONTEXT_COUNT);
     if (error != FFX_OK) {
       XELOGE("FSR 3.1: no Vulkan backend ({:08X})", uint32_t(error));
-      failed_ = true;
+      Unavailable();
       return false;
     }
     interface_made_ = true;
@@ -1874,7 +1949,17 @@ bool WardenUpscaler::Impl::EnsureContext(uint32_t render_width, uint32_t render_
   const FfxErrorCode error = ffxFsr3UpscalerContextCreate(&context_, &description);
   if (error != FFX_OK) {
     XELOGE("FSR 3.1: the upscaler was not made ({:08X})", uint32_t(error));
-    failed_ = true;
+    // BUG-112: the memory the SDK looks for (host-visible, coherent) - one failure of its
+    // that is no Vulkan call.
+    VkPhysicalDeviceMemoryProperties memory = {};
+    vkGetPhysicalDeviceMemoryProperties(device->physical_device(), &memory);
+    std::string types;
+    for (uint32_t i = 0; i < memory.memoryTypeCount; ++i) {
+      types += fmt::format(" [{}: flags {:X}, heap {}]", i, uint32_t(memory.memoryTypes[i].propertyFlags),
+                           memory.memoryTypes[i].heapIndex);
+    }
+    XELOGE("FSR 3.1: the device's memory types:{}", types);
+    Unavailable();
     return false;
   }
   context_made_ = true;
@@ -3111,6 +3196,35 @@ void WardenUpscaler::AfterDraw() {
   }
 }
 
+// PLAN 9.21: the corner vignette's draw, known by its pixel shader and its texture,
+// dropped while the option says off - with or without the upscaler.
+bool WardenUpscaler::SkipDraw(const RegisterFile& regs, uint64_t pixel_shader_hash,
+                              uint32_t pixel_shader_texture_mask) {
+  if (pixel_shader_hash != kVignetteShader) {
+    return false;
+  }
+  int on = g_vignette.load(std::memory_order_relaxed);
+  if (on < 0) {
+    on = SettingWord("vignette") != "off" ? 1 : 0;
+    g_vignette.store(on, std::memory_order_relaxed);
+    XELOGI("vignette: the corner vignette {} (files/vignette)", on ? "drawn" : "skipped");
+  }
+  if (on) {
+    return false;
+  }
+  uint32_t mask = pixel_shader_texture_mask;
+  while (mask) {
+    const uint32_t i = uint32_t(std::countr_zero(mask));
+    mask &= mask - 1;
+    const auto& fetch = regs.GetTextureFetch(i);
+    if (fetch.format == xenos::TextureFormat::k_DXT4_5 && fetch.size_2d.width + 1 == 256 &&
+        fetch.size_2d.height + 1 == 512) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void WardenUpscaler::OnResolve(const draw_util::ResolveInfo& resolve_info) {
   if (g_upscaler) {
     g_upscaler->OnResolve(resolve_info);
@@ -3143,5 +3257,9 @@ void SetMotionBlur(int level) {
 namespace warden {
 void SetDepthOfField(bool on) {
   xe::gpu::g_depth_of_field.store(on ? 1 : 0, std::memory_order_relaxed);
+}
+// PLAN 9.21: the corner vignette, live from the options panel.
+void SetVignette(bool on) {
+  xe::gpu::g_vignette.store(on ? 1 : 0, std::memory_order_relaxed);
 }
 }  // namespace warden

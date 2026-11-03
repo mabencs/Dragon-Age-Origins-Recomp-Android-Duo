@@ -1372,29 +1372,120 @@ final class DeckView extends LinearLayout {
     }
 
     private final class MapView extends View {
-        private final Paint pin = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint giver = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint member = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // The owner (2026-11-03): each marker an icon that says what it is - a moneybag for a
+        // merchant, an anvil for a smith, "!" for a quest giver - and its name only when the
+        // icon is tapped, a second tap hiding it again.
+        static final int GLYPH_PIN = 0;
+        static final int GLYPH_EXCLAIM = 1;
+        static final int GLYPH_PERSON = 2;
+        static final int GLYPH_MONEYBAG = 3;
+        static final int GLYPH_ANVIL = 4;
+        static final int GLYPH_DOOR = 5;
+        static final int GLYPH_TENT = 6;
+        static final int GLYPH_CROSS = 7;
+        static final int GLYPH_PAW = 8;
+        static final int GLYPH_FLAME = 9;
+        static final int GLYPH_SUN = 10;
+        static final int GLYPH_MUG = 11;
+
+        private final Paint badge = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint glyph = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint glyphLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint cut = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint faint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // The owner (2026-11-03): the names hard to read over the area's map - a dark
+        // outline under each, as the game's own map labels have.
+        private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint mapPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+        private final android.graphics.Path path = new android.graphics.Path();
         private final List<float[]> points = new ArrayList<>();
         private final List<String> names = new ArrayList<>();
         private final List<Integer> kinds = new ArrayList<>();
+        private final List<Integer> glyphs = new ArrayList<>();
+        /** Where each marker was last drawn, for the taps. */
+        private final List<float[]> drawn = new ArrayList<>();
+        /** The markers whose names are shown, by kind and name (they keep it while the area does). */
+        private final java.util.Set<String> opened = new java.util.HashSet<>();
         private String shownKey = "";
+        // The owner (2026-11-03): pinch to zoom, one finger to move the map. 1 is the whole
+        // area; the icons keep their size, so markers close together come apart as it grows.
+        private static final float MAX_ZOOM = 6f;
+        private float zoom = 1f;
+        private float panX, panY;
+        // The map's size on the screen at zoom 1 and the middle it turns about, from the last
+        // draw: what the panning is kept within.
+        private float contentWidth, contentHeight, viewCentreX, viewCentreY, mapAreaHeight;
+        private float downX, downY, lastX, lastY;
+        /** This touch moved or pinched: no tap at its end. */
+        private boolean dragged, pinched;
+        private final int touchSlop =
+                android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
+        private final android.view.ScaleGestureDetector pinch = new android.view.ScaleGestureDetector(
+                getContext(), new android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    @Override
+                    public boolean onScaleBegin(android.view.ScaleGestureDetector detector) {
+                        pinched = true;
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onScale(android.view.ScaleGestureDetector detector) {
+                        float next = Math.max(1f, Math.min(MAX_ZOOM, zoom * detector.getScaleFactor()));
+                        // The point between the fingers stays under them.
+                        float fx = detector.getFocusX() - viewCentreX;
+                        float fy = detector.getFocusY() - viewCentreY;
+                        panX = fx - (fx - panX) / zoom * next;
+                        panY = fy - (fy - panY) / zoom * next;
+                        zoom = next;
+                        clampPan();
+                        invalidate();
+                        return true;
+                    }
+                });
+
+        /** The map kept on the screen: no panning past its edges, none at all when it fits. */
+        private void clampPan() {
+            float maxX = Math.max(0f, (contentWidth * zoom - getWidth()) / 2f + dp(12));
+            float maxY = Math.max(0f, (contentHeight * zoom - mapAreaHeight) / 2f + dp(12));
+            if (zoom <= 1f) {
+                maxX = 0f;
+                maxY = 0f;
+            }
+            panX = Math.max(-maxX, Math.min(maxX, panX));
+            panY = Math.max(-maxY, Math.min(maxY, panY));
+        }
 
         MapView(Context context) {
             super(context);
-            pin.setColor(PARCHMENT);
-            giver.setColor(BRASS);
-            member.setColor(HEALTH);
+            badge.setColor(0xEB15110E);
+            rim.setStyle(Paint.Style.STROKE);
+            glyph.setStyle(Paint.Style.FILL);
+            glyphLine.setStyle(Paint.Style.STROKE);
+            glyphLine.setStrokeCap(Paint.Cap.ROUND);
+            glyphLine.setStrokeJoin(Paint.Join.ROUND);
+            cut.setColor(0xFF15110E);
             label.setColor(TEXT);
             label.setTextSize(dp(12));
             label.setTypeface(bodyFace);
             faint.setColor(FAINT);
             faint.setTextSize(dp(13));
             faint.setTypeface(bodyFace);
+            outline.setColor(0xE6000000);
+            outline.setStyle(Paint.Style.STROKE);
+            outline.setStrokeJoin(Paint.Join.ROUND);
+            outline.setStrokeCap(Paint.Cap.ROUND);
+            outline.setStrokeWidth(dp(3));
+            outline.setTypeface(bodyFace);
             setBackground(frame(STONE, EDGE));
+        }
+
+        /** Text with the dark outline under it, the outline's size the fill's. */
+        private void outlined(Canvas canvas, String text, float x, float y, Paint fill) {
+            outline.setTextSize(fill.getTextSize());
+            canvas.drawText(text, x, y, outline);
+            canvas.drawText(text, x, y, fill);
         }
 
         // The area's own map (DeckMaps), loaded off the UI thread when the area changes.
@@ -1416,6 +1507,10 @@ final class DeckView extends LinearLayout {
             if (!texture.equals(mapTexture)) {
                 mapTexture = texture;
                 map = null;
+                opened.clear();  // another area: its names closed again, the whole of it shown
+                zoom = 1f;
+                panX = 0f;
+                panY = 0f;
                 final String wanted = texture;
                 new Thread(() -> {
                     Bitmap loaded = DeckMaps.load(context, wanted);
@@ -1436,20 +1531,89 @@ final class DeckView extends LinearLayout {
             points.clear();
             names.clear();
             kinds.clear();
+            glyphs.clear();
             for (int note : indices(values, "MapNoteList.MapNotes.")) {
                 String prefix = "MapNoteList.MapNotes." + note + ".";
                 String name = orEmpty(values.get(prefix + "MapNote"));
-                add(values, prefix, name.isEmpty() ? orEmpty(values.get(prefix + "Name")) : name, 0);
+                if (name.isEmpty()) {
+                    name = orEmpty(values.get(prefix + "Name"));
+                }
+                add(values, prefix, name, 0, noteGlyph(orEmpty(values.get(prefix + "Icon")), name));
             }
             for (int g : indices(values, "Journal.PlotGivers.")) {
                 String prefix = "Journal.PlotGivers." + g + ".";
-                add(values, prefix, orEmpty(values.get(prefix + "PlaceableName")), 1);
+                add(values, prefix, orEmpty(values.get(prefix + "PlaceableName")), 1, GLYPH_EXCLAIM);
             }
             for (int m : indices(values, "Party.Members.")) {
                 String prefix = "Party.Members." + m + ".";
-                add(values, prefix, orEmpty(values.get(prefix + "Name")), 2);
+                add(values, prefix, orEmpty(values.get(prefix + "Name")), 2, GLYPH_PERSON);
             }
             invalidate();
+        }
+
+        /**
+         * A map note's icon: the game's own kind first - its map draws ico_mm_store for a
+         * merchant, ico_mm_exit for a way out of the area, ico_mm_mapPin for the rest - then
+         * what the note's name says it is (English, with the Spanish and Italian the disc
+         * also carries).
+         */
+        private int noteGlyph(String icon, String name) {
+            String n = name.toLowerCase(java.util.Locale.ROOT);
+            String i = icon.toLowerCase(java.util.Locale.ROOT);
+            boolean store = i.contains("store");
+            if (i.contains("exit")) {
+                return GLYPH_DOOR;
+            }
+            if (has(n, "smith", "armour", "armor", "weapon", "forge", "herrer", "fabbr", "armer")) {
+                return GLYPH_ANVIL;
+            }
+            if (store || has(n, "merchant", "trader", "quartermaster", "shop", "store", "vendor",
+                    "wonders of thedas", "mercader", "mercante", "comerciante", "intendente")) {
+                return GLYPH_MONEYBAG;
+            }
+            if (has(n, "infirmary", "healer", "herbal", "apothecar", "enfermer", "infermer",
+                    "curander", "guaritor")) {
+                return GLYPH_CROSS;
+            }
+            if (has(n, "kennel", "mabari", "hound", "perrera", "canil")) {
+                return GLYPH_PAW;
+            }
+            if (word(n, "tent", "tents", "tenda") || has(n, "pavilion", "pabell")) {
+                return GLYPH_TENT;
+            }
+            if (has(n, "fire", "hearth", "fuego", "fuoco", "hoguera", "falò")) {
+                return GLYPH_FLAME;
+            }
+            if (has(n, "chantry", "chapel", "church", "temple", "shrine", "capilla", "iglesia",
+                    "chiesa", "cappella", "santuario")) {
+                return GLYPH_SUN;
+            }
+            if (has(n, "tavern", "taberna", "posada", "taverna", "locanda")
+                    || word(n, "inn", "pub")) {
+                return GLYPH_MUG;
+            }
+            return GLYPH_PIN;
+        }
+
+        private boolean has(String text, String... words) {
+            for (String word : words) {
+                if (text.contains(word)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** A whole word of the name ("inn", not the start of "inner"). */
+        private boolean word(String text, String... words) {
+            for (String w : text.split("[^\\p{L}]+")) {
+                for (String wanted : words) {
+                    if (w.equals(wanted)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private String positions(Map<String, String> values) {
@@ -1461,7 +1625,7 @@ final class DeckView extends LinearLayout {
             return out.toString();
         }
 
-        private void add(Map<String, String> values, String prefix, String name, int kind) {
+        private void add(Map<String, String> values, String prefix, String name, int kind, int icon) {
             String x = values.get(prefix + "WorldPositionX");
             String y = values.get(prefix + "WorldPositionY");
             if (x == null || y == null) {
@@ -1470,10 +1634,101 @@ final class DeckView extends LinearLayout {
             points.add(new float[] {(float) number(x), (float) number(y)});
             names.add(name);
             kinds.add(kind);
+            glyphs.add(icon);
+        }
+
+        private String openKey(int i) {
+            return kinds.get(i) + "\t" + names.get(i);
+        }
+
+        @Override
+        public boolean onTouchEvent(android.view.MotionEvent event) {
+            pinch.onTouchEvent(event);
+            switch (event.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    downX = lastX = event.getX();
+                    downY = lastY = event.getY();
+                    dragged = false;
+                    pinched = false;
+                    if (getParent() != null) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    return true;
+                case android.view.MotionEvent.ACTION_POINTER_DOWN:
+                    pinched = true;
+                    return true;
+                case android.view.MotionEvent.ACTION_POINTER_UP: {
+                    // The finger left on the glass goes on moving the map from where it is.
+                    int up = event.getActionIndex();
+                    int stays = up == 0 ? 1 : 0;
+                    lastX = event.getX(stays);
+                    lastY = event.getY(stays);
+                    return true;
+                }
+                case android.view.MotionEvent.ACTION_MOVE:
+                    if (event.getPointerCount() == 1 && !pinch.isInProgress()) {
+                        float x = event.getX();
+                        float y = event.getY();
+                        if (!dragged && Math.hypot(x - downX, y - downY) > touchSlop) {
+                            dragged = true;
+                        }
+                        if (dragged && zoom > 1f) {
+                            panX += x - lastX;
+                            panY += y - lastY;
+                            clampPan();
+                            invalidate();
+                        }
+                        lastX = x;
+                        lastY = y;
+                    }
+                    return true;
+                case android.view.MotionEvent.ACTION_UP:
+                    if (!dragged && !pinched) {
+                        tap(event.getX(), event.getY());
+                    }
+                    return true;
+                default:
+                    return true;
+            }
+        }
+
+        /** A tap: the nearest icon within a fingertip opens or closes its name. */
+        private void tap(float tapX, float tapY) {
+            // The nearest icon within a fingertip of the tap; the party's on top, as drawn.
+            float reach = dp(26);
+            int best = -1;
+            float bestDistance = reach * reach;
+            for (int i = 0; i < drawn.size(); i++) {
+                float[] at = drawn.get(i);
+                if (at[1] > mapAreaHeight) {
+                    continue;  // under the legend, out of sight
+                }
+                float dx = tapX - at[0];
+                float dy = tapY - at[1];
+                float distance = dx * dx + dy * dy;
+                if (distance <= bestDistance) {
+                    bestDistance = distance;
+                    best = i;
+                }
+            }
+            if (best >= 0 && best < names.size() && !names.get(best).isEmpty()) {
+                String key = openKey(best);
+                if (!opened.remove(key)) {
+                    opened.add(key);
+                }
+                performClick();
+                invalidate();
+            }
+        }
+
+        @Override
+        public boolean performClick() {
+            return super.performClick();
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
+            drawn.clear();
             if (points.isEmpty()) {
                 canvas.drawText("The area's markers appear here as the game shows them.",
                         dp(12), dp(28), faint);
@@ -1505,13 +1760,22 @@ final class DeckView extends LinearLayout {
             // As the game's map screen shows the area: its map turned by Area.North's
             // quarter turns anticlockwise (Ostagar's King's Camp, 3: a quarter turn
             // clockwise - run 471 against the game's own map screen). The markers turn with
-            // it; their names stay upright.
+            // it; their icons and names stay upright.
             final int turns = withMap ? quarterTurns : 0;
             final boolean sideways = (turns & 1) != 0;
             float scale = Math.min((getWidth() - 2 * pad) / (sideways ? spanY : spanX),
                     (getHeight() - legend - 2 * pad) / (sideways ? spanX : spanY));
             final float centreX = getWidth() / 2f;
             final float centreY = (getHeight() - legend) / 2f;
+            viewCentreX = centreX;
+            viewCentreY = centreY;
+            mapAreaHeight = getHeight() - legend;
+            contentWidth = (sideways ? spanY : spanX) * scale;
+            contentHeight = (sideways ? spanX : spanY) * scale;
+            clampPan();
+            final float z = zoom;
+            final float shiftX = panX;
+            final float shiftY = panY;
             final float midX = (minX + maxX) / 2;
             final float midY = (minY + maxY) / 2;
             final float drawScale = scale;
@@ -1519,72 +1783,312 @@ final class DeckView extends LinearLayout {
             final double radians = Math.toRadians(degrees);
             final float cos = (float) Math.cos(radians);
             final float sin = (float) Math.sin(radians);
-            // A world position on the screen: about the middle, scaled, y up, turned.
+            // A world position on the screen: about the middle, scaled, y up, turned, then
+            // zoomed about the middle and moved as the fingers have.
             java.util.function.BiFunction<Float, Float, float[]> onScreen = (wx, wy) -> {
                 float dx = (wx - midX) * drawScale;
                 float dy = -(wy - midY) * drawScale;
-                return new float[] {centreX + dx * cos - dy * sin, centreY + dx * sin + dy * cos};
+                return new float[] {centreX + (dx * cos - dy * sin) * z + shiftX,
+                    centreY + (dx * sin + dy * cos) * z + shiftY};
             };
+            // The map, its icons and names inside the map's part of the tab, the legend below.
+            canvas.save();
+            canvas.clipRect(0, 0, getWidth(), getHeight() - legend);
             if (withMap) {
                 android.graphics.Rect source = new android.graphics.Rect(0, 0,
                         Math.round(map.getWidth() * mapWidth), Math.round(map.getHeight() * mapHeight));
                 android.graphics.RectF target = new android.graphics.RectF(
                         -spanX * scale / 2, -spanY * scale / 2, spanX * scale / 2, spanY * scale / 2);
                 canvas.save();
-                canvas.translate(centreX, centreY);
+                canvas.translate(centreX + shiftX, centreY + shiftY);
+                canvas.scale(z, z);
                 canvas.rotate(degrees);
                 canvas.drawBitmap(map, source, target, mapPaint);
                 canvas.restore();
             }
-            // The markers, then their names - right of the marker, else left, above or
-            // below it, else left out where they would overlap one already written.
-            List<android.graphics.RectF> written = new ArrayList<>();
-            float lineHeight = label.getTextSize() * 1.25f;
+            // The icons: the notes first, the quest givers over them, the party on top.
             for (int i = 0; i < points.size(); i++) {
-                float[] at = onScreen.apply(points.get(i)[0], points.get(i)[1]);
-                float x = at[0];
-                float y = at[1];
-                int kind = kinds.get(i);
-                float radius = dp(kind == 2 ? 7 : 5);
-                canvas.drawCircle(x, y, radius, kind == 0 ? pin : kind == 1 ? giver : member);
+                drawn.add(onScreen.apply(points.get(i)[0], points.get(i)[1]));
             }
+            spread();
+            for (int pass = 0; pass < 3; pass++) {
+                for (int i = 0; i < points.size(); i++) {
+                    if (kinds.get(i) == pass) {
+                        float[] at = drawn.get(i);
+                        drawIcon(canvas, kinds.get(i), glyphs.get(i), at[0], at[1],
+                                opened.contains(openKey(i)));
+                    }
+                }
+            }
+            // The opened icons' names - right of the icon, else left, above or below it,
+            // where they overlap no name already written; else right of it all the same.
+            // The icons are taken space too: a name goes where it covers none.
+            List<android.graphics.RectF> written = new ArrayList<>();
+            for (int i = 0; i < drawn.size(); i++) {
+                float r = iconRadius(kinds.get(i));
+                float[] at = drawn.get(i);
+                written.add(new android.graphics.RectF(at[0] - r, at[1] - r, at[0] + r, at[1] + r));
+            }
+            float lineHeight = label.getTextSize() * 1.25f;
             for (int i = points.size() - 1; i >= 0; i--) {
                 String name = names.get(i);
-                if (name.isEmpty()) {
+                if (name.isEmpty() || !opened.contains(openKey(i))) {
                     continue;
                 }
-                int kind = kinds.get(i);
-                String text = kind == 1 ? "! " + name : name;
-                float[] at = onScreen.apply(points.get(i)[0], points.get(i)[1]);
+                float[] at = drawn.get(i);
                 float px = at[0];
                 float py = at[1];
-                float gap = dp(kind == 2 ? 11 : 9);
-                float width = label.measureText(text);
+                float gap = iconRadius(kinds.get(i)) + dp(4);
+                float width = label.measureText(name);
                 float[][] places = {
                     {px + gap, py + dp(4)}, {px - gap - width, py + dp(4)},
-                    {px - width / 2, py - gap}, {px - width / 2, py + gap + lineHeight - dp(4)},
+                    {px - width / 2, py - gap - dp(2)}, {px - width / 2, py + gap + lineHeight - dp(4)},
+                    {px + gap * 0.7f, py - gap}, {px + gap * 0.7f, py + gap + lineHeight - dp(6)},
+                    {px - gap * 0.7f - width, py - gap},
+                    {px - gap * 0.7f - width, py + gap + lineHeight - dp(6)},
                 };
+                float[] chosen = places[0];
                 for (float[] place : places) {
-                    float x = place[0];
-                    float y = place[1];
-                    android.graphics.RectF box = new android.graphics.RectF(x, y - lineHeight + dp(3),
-                            x + width, y + dp(3));
-                    boolean clear = true;
+                    android.graphics.RectF box = new android.graphics.RectF(place[0],
+                            place[1] - lineHeight + dp(3), place[0] + width, place[1] + dp(3));
+                    boolean clear = box.left >= 0 && box.right <= getWidth();
                     for (android.graphics.RectF other : written) {
-                        if (android.graphics.RectF.intersects(box, other)) {
+                        if (clear && android.graphics.RectF.intersects(box, other)) {
                             clear = false;
-                            break;
                         }
                     }
                     if (clear) {
-                        written.add(box);
-                        canvas.drawText(text, x, y, label);
+                        chosen = place;
                         break;
                     }
                 }
+                written.add(new android.graphics.RectF(chosen[0], chosen[1] - lineHeight + dp(3),
+                        chosen[0] + width, chosen[1] + dp(3)));
+                outlined(canvas, name, chosen[0], chosen[1], label);
             }
-            canvas.drawText("● the party   ● quest givers   ● the area's notes", dp(10),
+            canvas.restore();
+            outlined(canvas, zoom > 1.01f
+                    ? "Tap an icon for its name · drag to move · pinch in to see all of it"
+                    : "Tap an icon for its name, again to hide it · pinch to zoom", dp(10),
                     getHeight() - dp(10), faint);
+        }
+
+        /**
+         * Markers close together would hide each other (the King's Camp's Dog Kennels under
+         * the Kennel Master's "!"): each pair nearer than most of their icons is pushed apart
+         * along the line between them, a few rounds, the party left where it is. They may
+         * overlap a little (the owner, 2026-11-03): zoomed in, they come apart by themselves.
+         */
+        private void spread() {
+            for (int round = 0; round < 24; round++) {
+                boolean moved = false;
+                for (int i = 0; i < drawn.size(); i++) {
+                    for (int j = i + 1; j < drawn.size(); j++) {
+                        float[] a = drawn.get(i);
+                        float[] b = drawn.get(j);
+                        float least = (iconRadius(kinds.get(i)) + iconRadius(kinds.get(j))) * 0.62f;
+                        float dx = b[0] - a[0];
+                        float dy = b[1] - a[1];
+                        float distance = (float) Math.hypot(dx, dy);
+                        if (distance >= least - 0.5f) {
+                            continue;
+                        }
+                        if (distance < 0.01f) {
+                            // The same place: apart in a direction of their own.
+                            dx = (float) Math.cos(j * 2.4);
+                            dy = (float) Math.sin(j * 2.4);
+                            distance = 1f;
+                        }
+                        float push = least - distance;
+                        float ux = dx / distance;
+                        float uy = dy / distance;
+                        boolean aStays = kinds.get(i) == 2 && kinds.get(j) != 2;
+                        boolean bStays = kinds.get(j) == 2 && kinds.get(i) != 2;
+                        float aShare = aStays ? 0f : bStays ? 1f : 0.5f;
+                        float bShare = 1f - aShare;
+                        a[0] -= ux * push * aShare;
+                        a[1] -= uy * push * aShare;
+                        b[0] += ux * push * bShare;
+                        b[1] += uy * push * bShare;
+                        moved = true;
+                    }
+                }
+                if (!moved) {
+                    break;
+                }
+            }
+        }
+
+        private float iconRadius(int kind) {
+            return dp(kind == 2 ? 13 : 12);
+        }
+
+        /** A marker: a dark disc, its rim the kind's colour (brighter when open), its glyph. */
+        private void drawIcon(Canvas canvas, int kind, int which, float x, float y, boolean open) {
+            float r = iconRadius(kind);
+            int colour = kind == 2 ? HEALTH : kind == 1 ? BRASS : PARCHMENT;
+            canvas.drawCircle(x, y, r, badge);
+            rim.setColor(open ? 0xFFF4E3B0 : colour);
+            rim.setStrokeWidth(open ? dp(2.5f) : dp(1.5f));
+            canvas.drawCircle(x, y, r - dp(1), rim);
+            glyph.setColor(kind == 2 ? 0xFFE8B4A8 : colour);
+            glyphLine.setColor(glyph.getColor());
+            canvas.save();
+            canvas.translate(x, y);
+            float s = r * 0.58f;  // the glyph's unit: -1..1 inside the disc
+            canvas.scale(s, s);
+            glyphLine.setStrokeWidth(0.18f);
+            drawGlyph(canvas, which);
+            canvas.restore();
+        }
+
+        private void drawGlyph(Canvas canvas, int which) {
+            android.graphics.Path p = path;
+            p.reset();
+            switch (which) {
+                case GLYPH_EXCLAIM:
+                    canvas.drawRoundRect(-0.17f, -0.95f, 0.17f, 0.35f, 0.12f, 0.12f, glyph);
+                    canvas.drawCircle(0, 0.72f, 0.19f, glyph);
+                    break;
+                case GLYPH_PERSON:
+                    canvas.drawCircle(0, -0.42f, 0.36f, glyph);
+                    p.moveTo(-0.8f, 0.9f);
+                    p.cubicTo(-0.8f, -0.05f, 0.8f, -0.05f, 0.8f, 0.9f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    break;
+                case GLYPH_MONEYBAG:
+                    // A full sack, wide at the bottom, its neck gathered and tied, the cloth
+                    // above the knot fanned out.
+                    p.moveTo(-0.24f, -0.3f);
+                    p.cubicTo(-0.95f, 0.05f, -0.95f, 0.92f, 0, 0.92f);
+                    p.cubicTo(0.95f, 0.92f, 0.95f, 0.05f, 0.24f, -0.3f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    p.reset();
+                    p.moveTo(-0.2f, -0.36f);
+                    p.lineTo(-0.55f, -0.9f);
+                    p.lineTo(-0.18f, -0.72f);
+                    p.lineTo(0, -0.92f);
+                    p.lineTo(0.18f, -0.72f);
+                    p.lineTo(0.55f, -0.9f);
+                    p.lineTo(0.2f, -0.36f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    cut.setStyle(Paint.Style.STROKE);
+                    cut.setStrokeWidth(0.12f);
+                    canvas.drawLine(-0.3f, -0.34f, 0.3f, -0.34f, cut);
+                    // A coin's edge on the sack.
+                    canvas.drawCircle(0, 0.4f, 0.26f, cut);
+                    cut.setStyle(Paint.Style.FILL);
+                    break;
+                case GLYPH_ANVIL:
+                    // The horn to the left, the face, the waist and the foot.
+                    p.moveTo(-1.0f, -0.55f);
+                    p.lineTo(0.85f, -0.55f);
+                    p.lineTo(0.85f, -0.15f);
+                    p.lineTo(0.32f, -0.15f);
+                    p.lineTo(0.22f, 0.32f);
+                    p.lineTo(0.62f, 0.55f);
+                    p.lineTo(0.62f, 0.78f);
+                    p.lineTo(-0.62f, 0.78f);
+                    p.lineTo(-0.62f, 0.55f);
+                    p.lineTo(-0.22f, 0.32f);
+                    p.lineTo(-0.32f, -0.15f);
+                    p.quadTo(-0.6f, -0.2f, -1.0f, -0.55f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    break;
+                case GLYPH_DOOR:
+                    // An arched doorway, an arrow going out through it.
+                    p.moveTo(-0.55f, 0.85f);
+                    p.lineTo(-0.55f, -0.2f);
+                    p.arcTo(-0.55f, -0.75f, 0.55f, 0.35f, 180, 180, false);
+                    p.lineTo(0.55f, 0.85f);
+                    canvas.drawPath(p, glyphLine);
+                    canvas.drawLine(-0.85f, 0.85f, 0.85f, 0.85f, glyphLine);
+                    p.reset();
+                    p.moveTo(-0.3f, 0.25f);
+                    p.lineTo(0.15f, 0.25f);
+                    canvas.drawPath(p, glyphLine);
+                    p.reset();
+                    p.moveTo(0.38f, 0.25f);
+                    p.lineTo(0.05f, 0.0f);
+                    p.lineTo(0.05f, 0.5f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    break;
+                case GLYPH_TENT:
+                    p.moveTo(0, -0.9f);
+                    p.lineTo(0.95f, 0.75f);
+                    p.lineTo(-0.95f, 0.75f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    p.reset();
+                    p.moveTo(0, -0.05f);
+                    p.lineTo(0.32f, 0.75f);
+                    p.lineTo(-0.32f, 0.75f);
+                    p.close();
+                    cut.setStyle(Paint.Style.FILL);
+                    canvas.drawPath(p, cut);
+                    break;
+                case GLYPH_CROSS:
+                    canvas.drawRect(-0.78f, -0.26f, 0.78f, 0.26f, glyph);
+                    canvas.drawRect(-0.26f, -0.78f, 0.26f, 0.78f, glyph);
+                    break;
+                case GLYPH_PAW:
+                    canvas.drawOval(-0.48f, 0.0f, 0.48f, 0.8f, glyph);
+                    canvas.drawCircle(-0.6f, -0.18f, 0.2f, glyph);
+                    canvas.drawCircle(-0.22f, -0.58f, 0.21f, glyph);
+                    canvas.drawCircle(0.22f, -0.58f, 0.21f, glyph);
+                    canvas.drawCircle(0.6f, -0.18f, 0.2f, glyph);
+                    break;
+                case GLYPH_FLAME:
+                    p.moveTo(0, -0.95f);
+                    p.cubicTo(0.3f, -0.4f, 0.85f, -0.05f, 0.55f, 0.55f);
+                    p.quadTo(0, 1.0f, -0.55f, 0.55f);
+                    p.cubicTo(-0.85f, -0.05f, -0.3f, -0.4f, 0, -0.95f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    p.reset();
+                    p.moveTo(0, 0.0f);
+                    p.cubicTo(0.15f, 0.25f, 0.35f, 0.4f, 0.22f, 0.62f);
+                    p.quadTo(0, 0.8f, -0.22f, 0.62f);
+                    p.cubicTo(-0.35f, 0.4f, -0.15f, 0.25f, 0, 0.0f);
+                    p.close();
+                    cut.setStyle(Paint.Style.FILL);
+                    canvas.drawPath(p, cut);
+                    break;
+                case GLYPH_SUN:
+                    // The Chantry's sunburst.
+                    canvas.drawCircle(0, 0, 0.36f, glyph);
+                    for (int ray = 0; ray < 8; ray++) {
+                        double angle = Math.PI * ray / 4;
+                        float c = (float) Math.cos(angle);
+                        float sn = (float) Math.sin(angle);
+                        canvas.drawLine(c * 0.55f, sn * 0.55f, c * 0.92f, sn * 0.92f, glyphLine);
+                    }
+                    break;
+                case GLYPH_MUG:
+                    canvas.drawRoundRect(-0.6f, -0.55f, 0.25f, 0.85f, 0.1f, 0.1f, glyph);
+                    p.addArc(0.0f, -0.3f, 0.75f, 0.5f, -90, 180);
+                    canvas.drawPath(p, glyphLine);
+                    canvas.drawCircle(-0.4f, -0.62f, 0.2f, glyph);
+                    canvas.drawCircle(-0.08f, -0.68f, 0.22f, glyph);
+                    canvas.drawCircle(0.18f, -0.6f, 0.17f, glyph);
+                    break;
+                default:
+                    // A map pin: a round head on a point, a hole in the head.
+                    p.moveTo(0, 0.95f);
+                    p.lineTo(-0.5f, -0.05f);
+                    p.lineTo(0.5f, -0.05f);
+                    p.close();
+                    canvas.drawPath(p, glyph);
+                    canvas.drawCircle(0, -0.3f, 0.56f, glyph);
+                    cut.setStyle(Paint.Style.FILL);
+                    canvas.drawCircle(0, -0.3f, 0.22f, cut);
+                    break;
+            }
         }
     }
 

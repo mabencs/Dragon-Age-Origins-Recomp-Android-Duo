@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.1.3-alpha - "Open Alpha"
+
+### New
+
+- **The deck's Map tab, redrawn.** Each marker is now an icon of what it is - a moneybag for
+  a merchant, an anvil for a smith, an exclamation mark for a quest giver, a door for an exit,
+  a tent for a camp, and so on. Tap an icon to show its name, and again to hide it. Pinch to
+  zoom (up to 6x) and drag to pan; zoomed out, icons may overlap a little, and they spread
+  apart as you zoom in. Names have a dark outline and stay readable over the map.
+- **Corner vignette** in Settings: the game darkens the corners of the picture in play. You
+  can now turn that off - in the launcher's settings, or in the options panel while playing,
+  where it takes effect at once.
+- **Release notes before an update.** When the launcher finds a newer version, Download &
+  install first shows what that version changes, and you choose whether to go on.
+
+### Fixed
+
+- **The upper corners of the world juddered with FSR 3.1 on**, whether the camera moved or
+  not. The game's corner darkening was mistaken for part of the HUD and drawn from the
+  unstabilised frame; it is now treated as the shade it is. With frame generation on, the same
+  corners also stepped at the game's own frame rate - fixed by the same change.
+- **With FSR 3.1 chosen on a device where it cannot run, the whole world juddered** under a
+  still HUD. The game now runs without FSR 3.1 there, steadily, and says so in its log.
+
+### Changed
+
+- The debug build, for people building from source, is named **DAO Debug** on the home screen,
+  so it can be told from the published app installed beside it.
+
+### Installing
+
+Updates from the launcher: 0.1.2-alpha offers this version under **Launch Dragon Age**.
+Earlier versions are installed by hand; your saves, game data and settings stay.
+
 ## 0.1.2-alpha - "Open Alpha"
 
 ### New

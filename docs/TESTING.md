@@ -440,6 +440,12 @@ SetState calls, with its fields and the call chain into states 2 and 3.
 the UI's ExternalCommands.SendMessage calls) when the game has been that many seconds in
 that mode without leaving it - `0 6 ToggleTacticalCameraMessage`. The log: `send-message:
 "..." sent`.
+**Corner vignette** (9.21): `files/vignette` holding `off` drops the HUD's vignette draw
+(the log: `vignette: the corner vignette skipped (files/vignette)` at its first draw); the
+options panel switches it live (`options: vignette is now off`). The draw is known by its
+pixel shader and its 256x512 DXT5 texture: a frame trace at the camp (`files/trace-swap`
+4000 on the ostagar route, run 677) shows it as `FT draw 45 ... PS 138D82BC28F866CC ... tex0
+fmt 20 (8bpp bc) 256x512`.
 **Shadows, post-processing** (9.8): `files/shadows` and `files/post-processing` holding
 `off` clear the engine's switches every frame (the log: `engine: dynamic shadows off`).
 **Colour** (9.3): `files/colour` holds `vivid` (10-bit, tagged Display-P3: the colours
@@ -465,7 +471,10 @@ are taken before it: to see it, `adb exec-out screencap -p` the panel.
 **Frame rate** (9.1, 10.1): `files/frame-rate` holds 30, 45, 60 or 120 - 60 without it
 (the log: `GPU: frame rate ...`); frame pacing is paced at 30 only, unless
 `files/frame-pacing` says otherwise. The GPU status line every 5 s counts the title's
-frames (`N swap packets`): their change over 5 s is its frame rate, scene by scene. The
+frames (`N swap packets`): their change over 5 s is its frame rate, scene by scene. Since
+BUG-112 the same line counts, per tick, the host's waits for the GPU and their time (`GPU
+waits N for X ms (longest Y)`), Xenia's render passes and barriers (`passes N, barriers N (N
+image, N buffer)`), and the submits and presents with the host's time inside them. The
 King's Camp is the GPU's at about 31 whatever the cap; character creation (the `chargen`
 route, mode 11) has room - 60, 69 at 120, 45 even (run 395).
 **FSR 3.1** (9.4, in progress): `files/fsr3` holding `quality`, `balanced` or
@@ -605,7 +614,9 @@ areas, depth in metres (top); the upscaled frame (middle); disocclusion, shading
 detail protection (bottom) - and its pass, 0.76 ms. A camera turn for a run: the
 `ostagar` route's presses, then `0000 135 45 0 0 0 0 14000 0` (the right stick held
 from 135 s for 45 s, after the camp's explore mode at about 122 s). `files/fsr3-show-ui`
-paints where the composite found the UI red over the scene in gray. `files/fsr3-probe`
+paints where the composite found the UI red over the scene in gray, and a shade - the game's
+corner vignette, a dark panel's shadow, put on the upscaled scene as a factor since BUG-113 -
+blue. `files/fsr3-probe`
 only makes a context on the game's device at start and logs it (run 399). Measure at the
 King's Camp: the profile into `files/fsr3` (`adb shell "run-as dev.daorecompandroid.duo sh -c
 'echo performance > files/fsr3'"`), then `bash tools/measure_ostagar.sh <run>` (runs
@@ -677,7 +688,10 @@ switch) runs the optical flow on the upscaled scene, as the SDK's FSR 3 does (ru
 between once the generator has been up the seconds the file holds (120 without a number):
 `lsfg-generated.raw`, `lsfg-source-before.raw`, `lsfg-source-after.raw` in the files folder
 (raw RGBA8 at the guest output's size; `adb exec-out run-as dev.daorecompandroid.duo cat
-files/<name>`). Step 1's `files/lsfg-test` is gone.
+files/<name>`). These are the generator's sources - the scene before the UI, so without the
+HUD or the corner vignette (BUG-113 was misread from them once). Step 1's `files/lsfg-test`
+is gone. `files/frame-generation-fp16` holding `off` runs lsfg-vk's shaders in 32-bit
+arithmetic (a test switch, BUG-112).
 **HDR10** (9.2): `files/hdr` holding `on` (the options panel writes it; offered only
 where `Display.HdrCapabilities` lists HDR10), `files/hdr-white` the paper white in nits
 (150-300; 200 without it). The log: `GPU: the display takes HDR10, 420 nits at its peak`,

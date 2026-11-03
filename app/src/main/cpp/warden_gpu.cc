@@ -60,6 +60,56 @@
 #include "xenia/gpu/gpu_flags.h"
 
 DECLARE_bool(vulkan_sparse_shared_memory);  // xenia/gpu/vulkan/vulkan_shared_memory.cc
+// BUG-112: the host's waits for the GPU (gpu_completion_timeline.h's edit): how many and
+// how long since the last status tick, and the longest - a driver that signals its fences
+// late, or a query the game waits on, shows here.
+static std::atomic<uint32_t> g_gpu_waits{0};
+static std::atomic<double> g_gpu_wait_ms{0.0};
+static std::atomic<double> g_gpu_wait_max_ms{0.0};
+// BUG-112: and the host's time inside vkQueueSubmit and vkQueuePresentKHR.
+static std::atomic<uint32_t> g_gpu_submits{0};
+static std::atomic<double> g_gpu_submit_ms{0.0};
+static std::atomic<double> g_gpu_submit_max_ms{0.0};
+static std::atomic<uint32_t> g_gpu_presents{0};
+static std::atomic<double> g_gpu_present_ms{0.0};
+static std::atomic<double> g_gpu_present_max_ms{0.0};
+static void AddTime(std::atomic<uint32_t>& count, std::atomic<double>& total,
+                    std::atomic<double>& longest, double milliseconds) {
+  count.fetch_add(1, std::memory_order_relaxed);
+  double sum = total.load(std::memory_order_relaxed);
+  while (!total.compare_exchange_weak(sum, sum + milliseconds)) {
+  }
+  double most = longest.load(std::memory_order_relaxed);
+  while (most < milliseconds && !longest.compare_exchange_weak(most, milliseconds)) {
+  }
+}
+// BUG-112: the pipeline barriers and render passes executed since the last tick.
+static std::atomic<uint32_t> g_gpu_barriers{0};
+static std::atomic<uint32_t> g_gpu_image_barriers{0};
+static std::atomic<uint32_t> g_gpu_buffer_barriers{0};
+static std::atomic<uint32_t> g_gpu_passes{0};
+extern "C" void warden_gpu_barrier_note(uint32_t image_barriers, uint32_t buffer_barriers) {
+  g_gpu_barriers.fetch_add(1, std::memory_order_relaxed);
+  g_gpu_image_barriers.fetch_add(image_barriers, std::memory_order_relaxed);
+  g_gpu_buffer_barriers.fetch_add(buffer_barriers, std::memory_order_relaxed);
+}
+extern "C" void warden_gpu_pass_note() { g_gpu_passes.fetch_add(1, std::memory_order_relaxed); }
+extern "C" void warden_gpu_submit_note(double milliseconds) {
+  AddTime(g_gpu_submits, g_gpu_submit_ms, g_gpu_submit_max_ms, milliseconds);
+}
+extern "C" void warden_gpu_present_note(double milliseconds) {
+  AddTime(g_gpu_presents, g_gpu_present_ms, g_gpu_present_max_ms, milliseconds);
+}
+extern "C" void warden_gpu_wait_note(double milliseconds) {
+  g_gpu_waits.fetch_add(1, std::memory_order_relaxed);
+  double total = g_gpu_wait_ms.load(std::memory_order_relaxed);
+  while (!g_gpu_wait_ms.compare_exchange_weak(total, total + milliseconds)) {
+  }
+  double longest = g_gpu_wait_max_ms.load(std::memory_order_relaxed);
+  while (longest < milliseconds && !g_gpu_wait_max_ms.compare_exchange_weak(longest, milliseconds)) {
+  }
+}
+
 DECLARE_bool(vulkan_validation);            // xenia/ui/vulkan/vulkan_provider.cc
 DECLARE_bool(debug_msaa_2x_as_4x);          // xenia/gpu/render_target_cache.cc
 DECLARE_int32(draw_resolution_scale_x);       // xenia/gpu/texture_cache.cc
@@ -398,6 +448,17 @@ void StatusLoop() {
       }
       line += fmt::format("; GPU swaps {}, draws per recent swap: {}", swaps,
                           stats.empty() ? "none recorded" : stats);
+      // BUG-112: the host's waits for the GPU since the last tick (gpu_completion_timeline.h).
+      line += fmt::format("; GPU waits {} for {:.1f} ms (longest {:.1f})",
+                          g_gpu_waits.exchange(0), g_gpu_wait_ms.exchange(0.0),
+                          g_gpu_wait_max_ms.exchange(0.0));
+      line += fmt::format("; passes {}, barriers {} ({} image, {} buffer)",
+                          g_gpu_passes.exchange(0), g_gpu_barriers.exchange(0),
+                          g_gpu_image_barriers.exchange(0), g_gpu_buffer_barriers.exchange(0));
+      line += fmt::format("; submits {} for {:.1f} ms (longest {:.1f}); presents {} for {:.1f} ms (longest {:.1f})",
+                          g_gpu_submits.exchange(0), g_gpu_submit_ms.exchange(0.0),
+                          g_gpu_submit_max_ms.exchange(0.0), g_gpu_presents.exchange(0),
+                          g_gpu_present_ms.exchange(0.0), g_gpu_present_max_ms.exchange(0.0));
     }
     // PLAN 10.2: the temperatures and the GPU's thermal cap, and the heat guard's step
     // when it is on (warden_thermal.cc).

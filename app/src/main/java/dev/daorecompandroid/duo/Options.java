@@ -257,6 +257,16 @@ final class Options {
                     "The game's own.",
                     "Faster, but darker and flatter.",
                 }),
+        // PLAN 9.21 (the owner asked, 2026-11-03): the game's darkening of the frame's corners
+        // in play - a vignette drawn with the HUD - as a switch, taken from the next frame
+        // (warden_upscale.cc skips its draw).
+        new Option("vignette", "Corner vignette", "on", true,
+                new String[] {"on", "off"},
+                new String[] {"On", "Off"},
+                new String[] {
+                    "The game's own: the corners of the picture darkened in play.",
+                    "The corners as bright as the rest of the picture.",
+                }),
         // PLAN 10.9: the Xenos rule that zero times anything is zero, or the GPU's own IEEE
         // multiplication (warden_gpu.cc) - about 40% of the heaviest shaders' arithmetic is
         // the rule. Exact unless chosen (the owner, 2026-10-31); from the next start.

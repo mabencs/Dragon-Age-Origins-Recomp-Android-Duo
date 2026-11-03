@@ -8,6 +8,11 @@ import android.content.pm.PackageInstaller;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
+import android.graphics.Typeface;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -24,6 +29,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -79,6 +86,8 @@ final class AppUpdate {
     private long size;
     private boolean selfInstall;
     private String whyManual = "";
+    /** The release notes of every version above this one, newest first (the owner, 2026-11-03). */
+    private CharSequence notes = "";
     private BroadcastReceiver installed;
     /** Android's dialog shown, and the session it is about. */
     private volatile boolean asked;
@@ -152,6 +161,16 @@ final class AppUpdate {
         }, "update-check");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    /** What the update brings: the notes of each release above this version, newest first. */
+    CharSequence notes() {
+        return notes;
+    }
+
+    /** The version offered ("0.1.3-alpha"). */
+    String version() {
+        return version;
     }
 
     /** The row chosen. */
@@ -250,6 +269,39 @@ final class AppUpdate {
             Log.i(TAG, "update check: " + BuildConfig.VERSION_NAME + " is the newest");
             return;
         }
+        // The notes of every release between this version and the newest, so a player who
+        // skipped one still reads what it changed.
+        int[] current = parse(BuildConfig.VERSION_NAME);
+        List<JSONObject> newer = new ArrayList<>();
+        for (int i = 0; i < releases.length(); i++) {
+            JSONObject release = releases.getJSONObject(i);
+            int[] number = parse(release.optString("tag_name"));
+            if (!release.optBoolean("draft") && number != null && compare(number, current) > 0
+                    && compare(number, newestVersion) <= 0) {
+                newer.add(release);
+            }
+        }
+        newer.sort((a, b) -> compare(parse(b.optString("tag_name")),
+                parse(a.optString("tag_name"))));
+        SpannableStringBuilder text = new SpannableStringBuilder();
+        for (JSONObject release : newer) {
+            String title = release.optString("name");
+            if (title.isEmpty()) {
+                title = release.optString("tag_name");
+            }
+            if (text.length() > 0) {
+                text.append("\n\n");
+            }
+            int start = text.length();
+            text.append(title);
+            text.setSpan(new StyleSpan(Typeface.BOLD), start, text.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.setSpan(new RelativeSizeSpan(1.25f), start, text.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.append("\n");
+            text.append(formatNotes(release.optString("body")));
+        }
+        final CharSequence allNotes = text;
         JSONObject apk = null;
         JSONArray assets = newest.optJSONArray("assets");
         for (int i = 0; assets != null && i < assets.length(); i++) {
@@ -280,11 +332,59 @@ final class AppUpdate {
             sha256 = sha;
             size = length;
             whyManual = why;
+            notes = allNotes;
             selfInstall = why.isEmpty();
             Log.i(TAG, "update check: " + name + " available"
                     + (selfInstall ? "" : " - manual: " + why));
             set(selfInstall ? AVAILABLE : MANUAL);
         });
+    }
+
+    /**
+     * A release's notes as GitHub's markdown has them, made plain for a dialog: headings
+     * bold, list items with bullets, emphasis, code marks and links' addresses taken off, the
+     * comments (the manual mark) left out, and the Installing section, which is for the
+     * release's page (the APK below, its checksum), not for the launcher installing it.
+     */
+    static CharSequence formatNotes(String markdown) {
+        String body = markdown.replace("\r", "").replaceAll("(?s)<!--.*?-->", "").trim();
+        SpannableStringBuilder out = new SpannableStringBuilder();
+        boolean blank = false;
+        boolean afterHeading = false;
+        boolean skipping = false;
+        for (String line : body.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                blank = out.length() > 0;
+                continue;
+            }
+            boolean heading = trimmed.startsWith("#");
+            if (heading) {
+                skipping = trimmed.replaceFirst("^#+\\s*", "").equalsIgnoreCase("Installing");
+            }
+            if (skipping) {
+                continue;
+            }
+            boolean item = trimmed.startsWith("- ") || trimmed.startsWith("* ");
+            boolean continued = !heading && !item && line.startsWith("  ") && !blank;
+            String content = heading ? trimmed.replaceFirst("^#+\\s*", "")
+                    : item ? trimmed.substring(2) : trimmed;
+            content = content.replaceAll("\\[([^\\]]*)\\]\\([^)]*\\)", "$1")
+                    .replace("**", "").replace("`", "");
+            if (out.length() > 0) {
+                // A heading's first line right under it; a blank line between paragraphs.
+                out.append(continued ? " " : afterHeading ? "\n" : blank || heading ? "\n\n" : "\n");
+            }
+            blank = false;
+            afterHeading = heading;
+            int start = out.length();
+            out.append(item ? "•  " + content : content);
+            if (heading) {
+                out.setSpan(new StyleSpan(Typeface.BOLD), start, out.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+        return out;
     }
 
     /** The first three numbers in the text: "v0.1.2-alpha", "0.1.1-alpha-debug". */

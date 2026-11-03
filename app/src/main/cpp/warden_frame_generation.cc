@@ -41,6 +41,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <string>
 
 // Xenia's Vulkan headers before warden_lsfg.h's <vulkan/vulkan_core.h>, which would
@@ -219,6 +220,8 @@ class FrameGeneration {
   uint32_t count_ = 1;
   bool fp16_ = false;
   bool dump_ = false;
+  // BUG-112: the generator submits on the game's queue 0 (a driver with one queue).
+  bool shared_queue_ = false;
   int dump_after_seconds_ = kDumpAfterSeconds;
   std::chrono::steady_clock::time_point generator_made_;
   bool failed_ = false;
@@ -343,7 +346,8 @@ FrameGeneration::FrameGeneration(vulkan::VulkanCommandProcessor& command_process
   features.pNext = &features_1_2;
   ifn.vkGetPhysicalDeviceFeatures2(device->physical_device(), &features);
   fp16_ = device->properties().apiVersion >= VK_MAKE_API_VERSION(0, 1, 2, 0) &&
-          features_1_2.shaderFloat16 && features.features.shaderInt16;
+          features_1_2.shaderFloat16 && features.features.shaderInt16 &&
+          SettingWord("frame-generation-fp16") != "off";  // a test switch (BUG-112)
   VkQueryPoolCreateInfo query_info = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
   query_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
   query_info.queryCount = kTimingSlots * 2;
@@ -632,7 +636,13 @@ bool FrameGeneration::MakeGenerator(uint32_t width, uint32_t height) {
   setup.physical_device = device->physical_device();
   setup.device = device->device();
   setup.get_instance_proc_addr = vkGetInstanceProcAddr;
-  setup.queue_index = 1;
+  // The graft's second queue where the driver has one (the Adreno's has three); a driver
+  // with one queue in the family (BUG-112: Mesa's Turnip) shares the game's queue 0, held
+  // through the generator's one-off submissions below. Asked for, a queue that does not
+  // exist is a null one, and Android's loader dies on it.
+  const uint32_t family = device->queue_family_graphics_compute();
+  const bool own_queue = device->queue_families()[family].queues.size() >= 2;
+  setup.queue_index = own_queue ? 1 : 0;
   setup.dll_path = dll_path_;
   setup.width = width;
   setup.height = height;
@@ -642,7 +652,14 @@ bool FrameGeneration::MakeGenerator(uint32_t width, uint32_t height) {
   setup.flow = half_flow_ ? 2.0f : 1.0f;
   const auto start = std::chrono::steady_clock::now();
   std::string error;
-  generator_ = warden::lsfg::Generator::Create(setup, &error);
+  {
+    std::optional<ui::vulkan::VulkanDevice::Queue::Acquisition> held;
+    if (!own_queue) {
+      held.emplace(device->AcquireQueue(family, 0));
+    }
+    generator_ = warden::lsfg::Generator::Create(setup, &error);
+  }
+  shared_queue_ = !own_queue;
   if (!generator_) {
     XELOGE("Frame generation: no generator - {}", error);
     return false;
@@ -652,11 +669,12 @@ bool FrameGeneration::MakeGenerator(uint32_t width, uint32_t height) {
   generator_made_ = std::chrono::steady_clock::now();
   last_generated_ = false;
   XELOGI("Frame generation: the generator is up in {:.0f} ms - {}x{}, {} between two, {} "
-         "mode, flow 1/{:.0f}, {}-bit shaders",
+         "mode, flow 1/{:.0f}, {}-bit shaders, {}",
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start)
              .count(),
          width, height, count_, perf_ ? "performance" : "quality", setup.flow,
-         generator_->fp16() ? 16 : 32);
+         generator_->fp16() ? 16 : 32,
+         own_queue ? "its own queue" : "the game's queue (the driver has one)");
   return true;
 }
 
@@ -699,6 +717,11 @@ bool FrameGeneration::Ready(uint32_t width, uint32_t height, bool generated_show
     // Nothing of this frame's touches the generator's images yet.
     AwaitSubmitted();
     std::string error;
+    std::optional<ui::vulkan::VulkanDevice::Queue::Acquisition> held;
+    if (shared_queue_) {
+      const ui::vulkan::VulkanDevice* device = Device();
+      held.emplace(device->AcquireQueue(device->queue_family_graphics_compute(), 0));
+    }
     if (generator_->Dump(FilesDir(), &error)) {
       XELOGI("Frame generation: a generated frame and the two it lies between written - "
              "{}x{} RGBA8, lsfg-generated.raw, lsfg-source-before.raw, lsfg-source-after.raw",

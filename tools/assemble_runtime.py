@@ -73,6 +73,7 @@ VKP_H = "xenia/ui/vulkan/vulkan_presenter.h"
 VKP_C = "xenia/ui/vulkan/vulkan_presenter.cc"
 VKI_H = "xenia/ui/vulkan/vulkan_instance.h"
 VKI_C = "xenia/ui/vulkan/vulkan_instance.cc"
+GCT_H = "xenia/ui/gpu_completion_timeline.h"
 VCP_H = "xenia/gpu/vulkan/vulkan_command_processor.h"
 VCP_C = "xenia/gpu/vulkan/vulkan_command_processor.cc"
 VGS_H = "xenia/gpu/vulkan/vulkan_graphics_system.h"
@@ -2958,6 +2959,92 @@ EDITS = [
      '#include "xenia/base/logging.h"\n'
      '#include "xenia/ui/presenter.h"'),
 
+    # BUG-112: every wait of the host for the GPU goes through the completion timeline;
+    # each is counted and timed for the GPU status line (warden_gpu.cc) - how long the
+    # command processor stands still for the GPU each tick, which a driver's fence
+    # latency or a slow query decides.
+    (GCT_H, "the waits for the GPU timed",
+     "    if (UpdateAndGetCompletedSubmission() < awaited_submission) {\n"
+     "      AwaitSubmissionImpl(awaited_submission);\n"
+     "    }\n",
+     "    if (UpdateAndGetCompletedSubmission() < awaited_submission) {\n"
+     "      // DAO/Warden (BUG-112): the wait timed for the GPU status line.\n"
+     "      const auto wait_began = std::chrono::steady_clock::now();\n"
+     "      AwaitSubmissionImpl(awaited_submission);\n"
+     "      warden_gpu_wait_note(std::chrono::duration<double, std::milli>(\n"
+     "                               std::chrono::steady_clock::now() - wait_began)\n"
+     "                               .count());\n"
+     "    }\n"),
+    (GCT_H, "the wait's clock",
+     "#include <algorithm>\n",
+     "#include <algorithm>\n"
+     "#include <chrono>  // DAO/Warden (BUG-112)\n"),
+    (GCT_H, "the wait note's declaration",
+     "namespace xe {\n"
+     "namespace ui {\n",
+     "// DAO/Warden (BUG-112): app/src/main/cpp/warden_gpu.cc.\n"
+     "extern \"C\" void warden_gpu_wait_note(double milliseconds);\n"
+     "\n"
+     "namespace xe {\n"
+     "namespace ui {\n"),
+    # BUG-112: the pipeline barriers and render passes executed, counted for the GPU
+    # status line - what a driver that drains the GPU at each barrier (Mesa's Turnip) pays per
+    # frame, which Xenia's EDRAM emulation makes many of.
+    (DCB_C, "the barriers and passes counted",
+     "      case Command::kVkPipelineBarrier: {\n"
+     "        auto& args = *reinterpret_cast<const ArgsVkPipelineBarrier*>(stream);\n",
+     "      case Command::kVkPipelineBarrier: {\n"
+     "        auto& args = *reinterpret_cast<const ArgsVkPipelineBarrier*>(stream);\n"
+     "        warden_gpu_barrier_note(args.image_memory_barrier_count,\n"
+     "                                args.buffer_memory_barrier_count);  // DAO/Warden (BUG-112)\n"),
+    (DCB_C, "the passes counted",
+     "      case Command::kVkBeginRenderPass: {\n",
+     "      case Command::kVkBeginRenderPass: {\n"
+     "        warden_gpu_pass_note();  // DAO/Warden (BUG-112)\n"),
+    (DCB_C, "the counts' declarations",
+     "namespace xe {\n"
+     "namespace gpu {\n"
+     "namespace vulkan {\n",
+     "// DAO/Warden (BUG-112): app/src/main/cpp/warden_gpu.cc.\n"
+     "extern \"C\" void warden_gpu_barrier_note(uint32_t image_barriers, uint32_t buffer_barriers);\n"
+     "extern \"C\" void warden_gpu_pass_note();\n"
+     "\n"
+     "namespace xe {\n"
+     "namespace gpu {\n"
+     "namespace vulkan {\n"),
+    # BUG-112: every vkQueueSubmit and vkQueuePresentKHR timed on the host (the present
+    # inside 4.7's edit of its lines) - a driver that blocks in them would show as the
+    # GPU idle and the command processor idle at once, which T30 does.
+    (VKD_H, "the submits timed",
+     "    const VkResult submit_result =\n"
+     "        functions().vkQueueSubmit(queue, submit_count, submits, fence);\n",
+     "    // DAO/Warden (BUG-112): the call's time, for the GPU status line.\n"
+     "    const auto submit_began = std::chrono::steady_clock::now();\n"
+     "    const VkResult submit_result =\n"
+     "        functions().vkQueueSubmit(queue, submit_count, submits, fence);\n"
+     "    warden_gpu_submit_note(std::chrono::duration<double, std::milli>(\n"
+     "                               std::chrono::steady_clock::now() - submit_began)\n"
+     "                               .count());\n"),
+    (VKD_H, "the submit note's declaration and clock",
+     "#include <atomic>\n"
+     "#include <memory>\n",
+     "#include <atomic>\n"
+     "#include <chrono>  // DAO/Warden (BUG-112)\n"
+     "#include <memory>\n"
+     "\n"
+     "// DAO/Warden (BUG-112): app/src/main/cpp/warden_gpu.cc.\n"
+     "extern \"C\" void warden_gpu_submit_note(double milliseconds);\n"),
+    (VKP_C, "the present note's declaration",
+     "namespace xe {\n"
+     "namespace ui {\n"
+     "namespace vulkan {\n",
+     "// DAO/Warden (BUG-112): app/src/main/cpp/warden_gpu.cc.\n"
+     "extern \"C\" void warden_gpu_present_note(double milliseconds);\n"
+     "\n"
+     "namespace xe {\n"
+     "namespace ui {\n"
+     "namespace vulkan {\n"),
+
     (VKI_C, "request VK_EXT_swapchain_colorspace",
      '  if (with_surface) {\n'
      '    // #1.\n'
@@ -4061,8 +4148,12 @@ EDITS = [
      "  {\n"
      "    const VulkanDevice::Queue::Acquisition queue_acquisition =\n"
      "        vulkan_device_->AcquireQueue(paint_context_.present_queue_family, 0);\n"
+     "    const auto present_began = std::chrono::steady_clock::now();  // DAO/Warden (BUG-112)\n"
      "    present_result =\n"
      "        dfn.vkQueuePresentKHR(queue_acquisition.queue(), &present_info);\n"
+     "    warden_gpu_present_note(std::chrono::duration<double, std::milli>(\n"
+     "                                std::chrono::steady_clock::now() - present_began)\n"
+     "                                .count());  // BUG-112\n"
      "  }\n"
      "  warden_presented(device, paint_context_.swapchain);  // DAO/Warden (4.7, 6.7)\n"),
     (DAO_GFX_SYSTEM, "4.9: the host GPU's loss hook declared",
@@ -4757,6 +4848,10 @@ EDITS = [
      "                     uint64_t vertex_shader_hash, bool window_offset_in_edram);\n"
      "  // After the draw is recorded.\n"
      "  static void AfterDraw();\n"
+     "  // PLAN 9.21: whether the draw is dropped - the game's corner vignette while the\n"
+     "  // Corner vignette option says off (with or without FSR 3.1).\n"
+     "  static bool SkipDraw(const RegisterFile& regs, uint64_t pixel_shader_hash,\n"
+     "                       uint32_t pixel_shader_texture_mask);\n"
      "  // In a resolve, before the render targets are read.\n"
      "  static void OnResolve(const draw_util::ResolveInfo& resolve_info);\n"
      "  // At the swap: the front buffer's view, size and format, the upscaled frame's\n"
@@ -4851,6 +4946,18 @@ EDITS = [
      "      pixel_shader ? pixel_shader->GetUsedTextureMaskAfterTranslation() : 0,\n"
      "      pixel_shader ? pixel_shader->ucode_data_hash() : 0,\n"
      "      vertex_shader->ucode_data_hash(), window_offset_tiles != 0);\n"),
+    (VCP_C, "9.21: the corner vignette's draw dropped while the option says off",
+     "  if (pixel_shader && pixel_shader->memexport_eM_written() != 0 &&\n"
+     "      device_properties.fragmentStoresAndAtomics) {\n",
+     "  // DAO/Warden (PLAN 9.21): the game's corner vignette, a draw of the HUD's, is\n"
+     "  // dropped while the Corner vignette option says off (warden_upscale.cc).\n"
+     "  if (pixel_shader &&\n"
+     "      WardenUpscaler::SkipDraw(regs, pixel_shader->ucode_data_hash(),\n"
+     "                               pixel_shader->GetUsedTextureMaskAfterTranslation())) {\n"
+     "    return true;\n"
+     "  }\n"
+     "  if (pixel_shader && pixel_shader->memexport_eM_written() != 0 &&\n"
+     "      device_properties.fragmentStoresAndAtomics) {\n"),
     (VCP_C, "9.4: after a draw, FSR 3.1's image before the UI",
      "  // Invalidate textures in memexported memory and watch for changes.\n",
      "  // DAO/Warden (PLAN 9.4): the image before the UI, after the last full-screen\n"

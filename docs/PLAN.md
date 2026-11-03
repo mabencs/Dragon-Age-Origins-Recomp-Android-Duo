@@ -1585,6 +1585,16 @@ Depends on Phase 6. Full design in [`SECOND-SCREEN.md`](SECOND-SCREEN.md).
       conversation. **Limits:** a trap's Use is sent and does nothing, as it wants a place on
       the ground; not on the deck: Inspect's first lines (the item's kind, its material and
       tier), its colours, and rune slots; the buttons act only for the selected character.
+- [x] 8.13 **The Map tab's icons, zoom and pan (the owner asked, 2026-11-03; session 43).**
+      `DeckView.MapView`: each marker an icon of what it is, chosen from the game's own map
+      icon where it has one (`ico_mm_store`, the exits) and else from the name's words - a
+      moneybag for a merchant, an anvil for a smith, an exclamation mark for a quest giver, a
+      door, a tent, a bed, a mug, a pin for the rest - drawn as glyphs with a dark outline, as
+      the names are. A tap on an icon shows its name beside it, and again hides it; the names
+      keep clear of the icons. Pinch zooms up to 6x about the fingers and a drag pans, held
+      inside the map; zoomed out, icons may overlap by a little (0.62 of their size) and spread
+      apart as the map zooms. Checked on the device with raw multi-touch events on the second
+      screen's touch panel (`sendevent`, two slots) and screenshots.
 
 ---
 
@@ -2611,6 +2621,18 @@ behind the owner's (CLAUDE.md).
         command processor holds it), so that gain is not measured. Waiting on the owner:
         go on (the large change - shared images, sync fds, the swapchain on the second
         device - for a gain that is now uncertain) or stop here.
+- [x] 9.21 **The corner vignette as a switch (the owner asked, 2026-11-03; session 43, runs
+      677-680).** The game darkens the frame's upper corners in play and conversations: a draw
+      of the HUD's - four rectangles blended over the frame with the texture `da_vignette`
+      (DXT5, 256x512), pixel shader `138D82BC28F866CC`, draw 45 of the camp's traced frame
+      (run 677). The PC mod "Vignette Be Gone" (theskymoves, 2017) blanks that texture in
+      `packages/core/override`; the owner's copy was read for that pointer only, nothing of
+      it is in the repository. **Corner vignette** (`files/vignette`, On · Off, live) in the
+      launcher's settings and the options panel: while off, the draw is dropped in the
+      command processor (`WardenUpscaler::SkipDraw`, known by the shader and the texture's
+      format and size), so it switches at once and works with FSR 3.1 on or off. Run 678
+      (off from the start): the corners as bright as the rest; run 679 (on): the vignette.
+      With the vignette off, BUG-113's shade has nothing to find in the corners.
 
 ## Phase 10 — Polish
 
@@ -3693,6 +3715,11 @@ on a clean device, given the two disc images, makes the game's code and plays.
       `files/update-feed`: manual, nothing newer, drafts, the highest of several, no APK, an odd
       tag, an empty list and a broken answer. The manual path on the published package was not
       run: only a debug build takes a test list.
+      **Session 43 (the owner asked, 2026-11-03):** the release's notes shown in a dialog before
+      the download starts (and before a manual update's page opens): the Markdown's headings in
+      bold, its bullets, links and code marks plain, HTML comments and the notes' own
+      "Installing" section left out (`AppUpdate.formatNotes`, `GameActivity.showReleaseNotes`).
+      Checked with a test feed on the debug build.
 
 ---
 

@@ -564,6 +564,8 @@ bool Runtime::ApplyOption(const std::string& name, const std::string& value) {
     SetDynamicShadows(value != "off");
   } else if (name == "post-processing") {
     SetPostProcessing(value != "off");
+  } else if (name == "vignette") {
+    SetVignette(value != "off");  // PLAN 9.21, from the next frame
   } else if (name == "headphones") {
     SetHeadphoneSurround(value == "surround");
   } else if (name == "volume-boost") {

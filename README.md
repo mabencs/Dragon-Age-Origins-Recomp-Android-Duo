@@ -242,8 +242,8 @@ the main menu.
 ### Updating
 
 When a newer version is out, a row appears under **Launch Dragon Age**. **Download & install**
-fetches it, checks it against the checksum GitHub publishes, and hands it to Android, which asks
-you to confirm; your saves, game data and settings stay. The first time, Android also asks you
+first shows you the release's notes - what it changes - and, if you go on, fetches it, checks it
+against the checksum GitHub publishes, and hands it to Android, which asks you to confirm; your saves, game data and settings stay. The first time, Android also asks you
 to allow installs from this app. The app closes as it installs: open it again. Without a
 connection there is simply no row, and the game plays as ever.
 
@@ -303,6 +303,7 @@ setting's description in the panel matches the table.
 | HDR paper white | 150 nits · **200 nits** · 250 nits · 300 nits | *150 nits:* With HDR on: white at 150 nits - dimmer, the most room for highlights.<br>*200 nits:* With HDR on: white at 200 nits, about the reference for graphics in HDR.<br>*250 nits:* With HDR on: white at 250 nits - brighter.<br>*300 nits:* With HDR on: white at 300 nits - the brightest, the least room for highlights. |
 | Dynamic shadows | **On** · Off | *On:* The game's own.<br>*Off:* Faster, the most at 60 fps: at the King's Camp 31.6 -> 36.5 fps. |
 | Post-processing | **On** · Off | *On:* The game's own.<br>*Off:* Faster, but darker and flatter. |
+| Corner vignette | **On** · Off | *On:* The game's own: the corners of the picture darkened in play.<br>*Off:* The corners as bright as the rest of the picture. Takes effect at once. |
 | Shader math \* | **Exact** · Fast | *Exact:* The Xbox 360's own arithmetic: zero times anything is zero.<br>*Fast:* The handheld GPU's own multiplication: much less work in the heaviest shaders (the King's Camp with Lossless 2x, balanced: 27 -> 30 fps, its cap; uncapped without frame generation 37 -> 42). Not exact - where the game multiplies zero by infinity, a pixel can come out wrong. |
 | Texture filtering \* | The game's own · 4x · 8x · **16x** | *The game's own:* The game's own filtering: the ground blurs as it recedes.<br>*4x:* 4x anisotropic filtering.<br>*8x:* 8x anisotropic filtering.<br>*16x:* 16x anisotropic filtering: the receding ground stays sharp, at no measurable cost. |
 | Button prompts \* | **Xbox** · Nintendo · PlayStation | *Xbox:* A at the bottom, B on the right.<br>*Nintendo:* B at the bottom, A on the right.<br>*PlayStation:* ✕ at the bottom, ○ on the right. |
@@ -369,7 +370,7 @@ the game. Tap the tabs along the top.
 | **Party** | Each member's portrait, name, class, health, and mana or stamina, with level-up, poison and paralysis marked. |
 | **Quickbar** | The selected character's quick slots, large enough for a thumb. A tap uses the slot, as its button would (in exploration and combat). |
 | **Quests** | The journal's two pages, current and completed quests, in the game's groups. A tap unfolds a group, and a quest for its text. |
-| **Map** | The area: the party, quest givers and the area's notes, north up. |
+| **Map** | The area, north up: the party, and each place and person as an icon of what it is - a moneybag for a merchant, an anvil for a smith, an exclamation mark for a quest giver, a door for an exit. A tap on an icon shows its name; tap again to hide it. Pinch to zoom, drag to pan. |
 | **Tactics** | Each member's tactics slots: condition, command and target. |
 | **Codex** | The codex entries you have found, by category: a tap unfolds a category, and an entry to read it. The journal's conversations below. |
 | **Items** | What each member wears, the backpack, and the purse. A tap shows an item's stats, properties, requirements and text. **Equip**, **Use** and **Unequip** act for the character selected in the game (in exploration and combat). |
