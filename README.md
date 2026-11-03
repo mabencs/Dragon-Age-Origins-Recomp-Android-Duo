@@ -5,6 +5,7 @@
 **Version 0.1 — Open Alpha** · Dragon Age: Origins for the Xbox 360, natively recompiled for
 Android, made for the **AYN Thor** and its two screens.
 
+The duo screen functionality can be turned off for single-screen devices.
 Should also be playable on other handheld gaming devices and phones as there is an on-screen controller overlay available. They are however untested.
 
 ![The game on the AYN Thor's two screens: Orzammar's Royal Palace with the Dwarf Noble and Gorim on
