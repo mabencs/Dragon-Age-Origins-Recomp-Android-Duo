@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Less CPU work while the game waits.** The game's main thread no longer spins a processor core
+  while it waits for its render thread, and a diagnostic record of the game's functions is now kept
+  only in Debugging Mode. Together about a fifth less CPU work, at the same frame rate. On the AYN
+  Thor's own performance profile this barely changes the temperature, which is set by the GPU
+  running at full speed; on lighter profiles and other devices it may run cooler.
+
 ## 0.1.8-alpha - "Open Alpha"
 
 ### New

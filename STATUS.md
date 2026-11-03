@@ -1948,6 +1948,14 @@ Newest first. One short entry per session: what changed, what's next.
   **built** (the owner asked): Options -> Aspect ratio (16:9 default, 4:3) above Rendering
   resolution, which offers only the aspect's sizes; FSR 3.1's 4:3 profiles to the largest 4:3
   area; frame generation at 4:3 (runs 695-696). Not checked on a real 4:3 screen.
+- **BUG-117 (issue #2, high temperatures):** the title's waits spin (the render thread's GPU fence
+  wait, the main thread's Sleep(0) hand-off) and the guest trace costs every function's entry.
+  Fixed in the runtime: Sleep(0) streaks nap, the trace only in Debugging Mode - 3.0-3.1 cores to
+  2.5 at the same frame rate. But the Thor's power and temperatures did not move (about 10 W, big
+  cores 94.7 C): its firmware profile holds the CPU clocks high (two busy loops added 0.2 W), and
+  the heat is the GPU's at its ceiling. The fence wait asleep was built and measured (the render
+  thread 98% to 25%) but left out: it changes the game code's ABI for no gain on the Thor.
+  Measured with the USB-PD input's power (runs 697-703).
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

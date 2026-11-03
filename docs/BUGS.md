@@ -83,6 +83,7 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-117](#bug-117) | our runtime / the title's waits | medium | **PARTLY FIXED** | High temperatures (issue #2): the title's waits spin - the main thread's Sleep(0) hand-off and the render thread's GPU fence wait - and the guest trace costs every function's entry. The CPU work cut by a fifth; on the Thor's own performance profile the power and temperatures are the GPU's, unchanged |
 | [BUG-116](#bug-116) | the device's firmware (AYN Thor) / our app | high | **FIXED** | The game's volume did not follow Android's: AYN gives apps on the second screen their own volume, and the deck (an activity there) put the game there. Held volume-up past the top raised it further; with the deck off, the media volume was applied twice. The deck is a window of the game's now |
 | [BUG-115](#bug-115) | our app (the deck's Map tab, PLAN 8.4) | medium | **FIXED** | The deck's map was upside down against the game's map screen in every area whose North is 1 or 3 (the King's Camp): it was turned anticlockwise, the game turns clockwise |
 | [BUG-114](#bug-114) | our app (the update, PLAN 13.1) | high | **FIXED** (0.1.5-alpha) | The launcher's update failed after Android's Install: the launcher, back in front, abandoned the session Android was installing - "the install was cancelled". In 0.1.2 to 0.1.4; mostly fails, sometimes wins |
@@ -2939,6 +2940,59 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-117
+**High temperatures during play (issue #2)**
+Our runtime (`warden_threads.cc`, `warden_trace.cc`) and the title's own waits · severity medium ·
+**PARTLY FIXED** session 43
+
+**What it looks like** (issue #2, 2026-11-03: 65-70 C; the owner: about 80 C): the Thor hot in play.
+The game's own reading at the King's Camp (DAO Debug: 120 fps, FSR 3.1 off, Lossless 2x, 1360x768,
+FXAA): big cores 94-95 C, the GPU 87-90 C at its 680 MHz ceiling, the board 64-71 C.
+
+**What uses the CPU** (run 697, per thread from /proc, simpleperf as the app): the game process
+3.2-3.3 cores, two threads at about 99% each:
+- **DragonAge::Render** - the title's Direct3D waits for the GPU by spinning. sub_82DA16F0, its
+  BlockOnFence, loops until the read pointer the command processor writes back passes the fence,
+  calling sub_82D8E218 each time round: db16cyc delays at low priority (cctpl), which gave the
+  Xenon's core to its sibling hardware thread, and a 5000-tick check. Translated, the delays are
+  nothing: a big core flat out whenever the game waits on the GPU, most frames.
+- **Eclipse::Update** - the main thread's hand-off to the render thread (sub_825596E0) sets a flag
+  and polls, with a zero-timeout event wait and Sleep(0) (KeDelayExecutionThread, 0 ticks), until
+  it is answered; Sleep(0) was sched_yield, which returns at once when the core is free.
+- **The guest trace** (warden_guest_trace, every translated function's prologue): 22% of the two
+  threads' cycles, 55% of the render thread's with the dynamic linker's thread-local lookup
+  (tlsdesc_resolver_dynamic) - the library is opened at run time, so each entry's ring is found
+  the slow way.
+
+**Fixed** (the runtime only - the game code's ABI unchanged, no player rebuild):
+- A Sleep(0) or NtYieldExecution within 200 us of the last, from the eighth in a row, naps 30 us
+  instead of yielding (`YieldOrNap`); a lone one between pieces of work still yields.
+- The guest trace is recorded only in Debugging Mode (`WARDEN_DEBUG_MODE`) or with
+  `files/guest-trace`: otherwise the entry returns before the ring. Its readers are the fault log
+  and the thread reports only.
+
+Measured at the camp, 180 s after 60 s each, the device's power from its USB-PD input (the battery
+full, reporting 0 - the input is the whole draw): the old waits (`files/hack-spin`,
+`files/guest-trace`) runs 700 and 702: 3.0-3.1 cores, 10.18 and 9.84 W, 57.4 and 56.7 frames shown
+a second, big cores 94.7 C; run 703 with the fixes: **2.5 cores** (the main thread 43%), 9.77 W,
+57.8 frames, big cores 94.7 C.
+
+**Why the temperatures do not move on the Thor:** its firmware's profile holds the CPU clusters at
+high clocks (2016 / 2707-2803 MHz, the prime core 1.8-3.2 GHz; the governor walt, not touched), so
+an idle core saves next to nothing: two busy loops pinned to big cores beside the game added 0.2 W
+(9.90, 10.11, 9.95 W - the control). The heat is the GPU's, at its ceiling every frame as the game
+is GPU-bound, and the profile's. Lowering it means less GPU work - the settings' trades (Lossless
+2x's balanced mode about 6 ms of the GPU a generated frame against quality's 14, a lower
+resolution, FSR 3.1) - not something free.
+
+**Not shipped: the render thread's fence wait asleep.** Built and measured (run 701, with the above):
+an override of sub_82D8E218 that, when the pass says go on waiting, sleeps on a futex the command
+processor bumps where it writes the read pointer back (command_processor.cc, after
+`store_and_swap` of read_ptr_writeback_ptr_), at most 2 ms - the render thread 98% to 25%, the
+process 1.6 cores, frames 56.8, but 10.12 W. An override changes the game code's ABI (74aa2ee2adfcb1e2
+against 1961314d8a1bb6ae): every player's Build again, about eight minutes, for no measured gain on
+the Thor's profile; kept out until a device or profile shows one.
 
 ## BUG-116
 **The game's volume not fully following Android's**

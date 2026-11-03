@@ -277,7 +277,32 @@ void ReportLoop() {
 
 }  // namespace
 
+// BUG-117: the trace costs every translated function's entry a thread-local lookup (the
+// dynamic linker's slow path, as this library is opened at run time) and a store - over
+// half the render thread's cycles in run 697 (warden_guest_trace 43.7%, tlsdesc 11.8%). It
+// serves the fault and thread reports only, so it is kept for Debugging Mode, whose reports
+// are what a bug report sends, and files/guest-trace (a test switch); otherwise the entry
+// returns before touching the thread's ring.
+bool TraceOn() {
+  static const bool on = [] {
+    if (const char* debug = std::getenv("WARDEN_DEBUG_MODE"); debug && *debug == '1') {
+      return true;
+    }
+    const char* dir = std::getenv("WARDEN_FILES_DIR");
+    if (FILE* file = dir ? std::fopen((std::string(dir) + "/guest-trace").c_str(), "r")
+                         : nullptr) {
+      std::fclose(file);
+      return true;
+    }
+    return false;
+  }();
+  return on;
+}
+
 extern "C" void warden_guest_trace(const char* function) {
+  if (!TraceOn()) {
+    return;
+  }
   Ring& ring = ThisRing();
   const uint32_t next = ring.next.load(std::memory_order_relaxed);
   ring.names[next % kRing] = function;
@@ -285,6 +310,9 @@ extern "C" void warden_guest_trace(const char* function) {
 }
 
 extern "C" void warden_guest_trace_detail(uint32_t detail) {
+  if (!TraceOn()) {
+    return;
+  }
   Ring& ring = ThisRing();
   ring.detail.store(detail, std::memory_order_relaxed);
   ring.detail_at.store(ring.next.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -293,6 +321,9 @@ extern "C" void warden_guest_trace_detail(uint32_t detail) {
 namespace warden {
 
 void SetGuestTraceThreadName(const std::string& name) {
+  if (!TraceOn()) {
+    return;
+  }
   Ring& ring = ThisRing();
   std::lock_guard<std::mutex> lock(g_rings_mutex);
   ring.thread_name = name;

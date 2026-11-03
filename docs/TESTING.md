@@ -465,6 +465,14 @@ files/audio-dump.wav > build/audioN.wav` (1.15 MB a second) and delete it after.
 the candidate mixdowns; `--render` runs the recording through the device's own mixer
 (`tools/audio_host.cc` with `warden_audio_mix.cc`) and compares the speakers' output with
 the headphones'.
+**Heat and power** (BUG-117): with the battery full (`/sys/class/power_supply/battery/current_now`
+0), the USB-PD input's current times voltage (`/sys/class/power_supply/usb/current_now`,
+`voltage_now`) is the device's whole draw - about 10 W at the camp. Per-thread CPU from
+`/proc/<pid>/task/*/stat` over a window; `simpleperf record -t <tids> -e cpu-cycles` as the app
+(`run-as`; cpu-clock is not offered). `files/hack-spin` restores the spinning Sleep(0),
+`files/guest-trace` the guest trace outside Debugging Mode - the old waits, for an A/B with one
+build. Busy loops started over adb must be detached (`nohup ... > /dev/null 2>&1 < /dev/null &`)
+or `adb shell` never returns - and killed after.
 **4:3** (PLAN 9.22): Options -> Aspect ratio, `files/aspect` holding `4:3` (the log: `video mode:
 4:3 - the title is told 960x720, not widescreen (Aspect ratio)`; FSR 3.1's `the upscaled image,
 1440x1080` on the Thor). The test switch before it: `files/hack-video-mode` holding `960x720 4:3` (or `1280x960 4:3`)

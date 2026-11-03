@@ -33,6 +33,8 @@
 #include <chrono>
 #include <cstring>
 #include <memory>
+#include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <thread>
 #include <vector>
@@ -371,6 +373,59 @@ PPC_FUNC(__imp__NtSuspendThread) {
   ctx.r3.u64 = kStatusSuccess;
 }
 
+// BUG-117 (the owner and issue #2, 2026-11-03: the Thor's big cores at 95 C): the title
+// waits for its other threads with Sleep(0) in a loop - the main thread's hand-off to the
+// render thread (sub_825596E0) polls an event with no timeout and Sleep(0)s until the
+// render thread answers. On the Xenon a zero sleep gave the core to its sibling hardware
+// thread; here sched_yield returns at once when nothing else wants the core, so the loop
+// spun a big core flat out (run 697: Eclipse::Update 99% of a core, 71% of it in
+// sched_yield). A zero-length sleep that follows another within kSpinGap is a spin: from
+// the kSpinStreak-th on it naps kNap instead - the answer seen within about that, the core
+// idle meanwhile. A lone Sleep(0) between pieces of work still only yields.
+namespace {
+constexpr auto kSpinGap = std::chrono::microseconds(200);
+constexpr uint32_t kSpinStreak = 8;
+constexpr auto kNap = std::chrono::microseconds(30);
+
+}  // namespace
+
+namespace warden {
+// BUG-117's test switch: files/hack-spin restores the spinning wait (Sleep(0) as a yield
+// whatever the streak), to measure against.
+bool SpinWaits() {
+  static const bool spin = [] {
+    const char* dir = std::getenv("WARDEN_FILES_DIR");
+    FILE* file = dir ? std::fopen((std::string(dir) + "/hack-spin").c_str(), "r") : nullptr;
+    if (file) {
+      std::fclose(file);
+      XELOGW("waits: spinning as before BUG-117 (files/hack-spin)");
+    }
+    return file != nullptr;
+  }();
+  return spin;
+}
+}  // namespace warden
+
+namespace {
+void YieldOrNap() {
+  if (warden::SpinWaits()) {
+    sched_yield();
+    return;
+  }
+  thread_local Clock::time_point t_last;
+  thread_local uint32_t t_streak = 0;
+  const Clock::time_point now = Clock::now();
+  t_streak = now - t_last < kSpinGap ? t_streak + 1 : 0;
+  t_last = now;
+  if (t_streak >= kSpinStreak) {
+    std::this_thread::sleep_for(kNap);
+    t_last = Clock::now();
+  } else {
+    sched_yield();
+  }
+}
+}  // namespace
+
 // NTSTATUS KeDelayExecutionThread(KPROCESSOR_MODE mode, BOOLEAN alertable,
 //                                 PLARGE_INTEGER interval)
 //
@@ -425,7 +480,7 @@ PPC_FUNC(__imp__KeDelayExecutionThread) {
     }
   }
   if (deadline.at <= Clock::now()) {
-    sched_yield();
+    YieldOrNap();
   } else {
     std::this_thread::sleep_until(deadline.at);
   }
@@ -437,7 +492,7 @@ PPC_FUNC(__imp__NtYieldExecution) {
   warden_guest_trace(__func__);  // so a parked thread's trace ends in its wait
   (void)base;
   GuestSuspendPoint();  // a thread yielding in a loop is waiting too
-  sched_yield();
+  YieldOrNap();  // BUG-117
   ctx.r3.u64 = kStatusSuccess;
 }
 
