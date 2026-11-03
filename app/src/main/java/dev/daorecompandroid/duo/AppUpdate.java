@@ -185,16 +185,40 @@ final class AppUpdate {
     /**
      * The launcher in front again. Android's first dialog, the one that sends the player to
      * allow installs from this app, says nothing to the session when it is cancelled: with
-     * that dialog gone and no answer, the row would wait for ever.
+     * that dialog gone and no answer, the row would wait for ever (BUG-111).
+     *
+     * BUG-114: but the launcher is also in front again the moment the player taps Install,
+     * while Android installs - abandoning the session here then cancelled every real
+     * install (0.1.3 to 0.1.4, three times). So nothing is abandoned on the way back: if no
+     * answer has come after a while and Android is not installing, the row offers Try again,
+     * and only that tap gives the old session up (download).
      */
     void resumed() {
         if (state == INSTALLING && asked) {
             asked = false;
-            abandon();
-            failure = "the install was cancelled.";
-            set(FAILED);
+            final int id = sessionId;
+            Log.i(TAG, "update: back from Android's installer - waiting for its answer");
+            main.postDelayed(() -> {
+                if (state != INSTALLING || sessionId != id || id == -1) {
+                    return;  // answered, or another try since
+                }
+                PackageInstaller.SessionInfo info =
+                        context.getPackageManager().getPackageInstaller().getSessionInfo(id);
+                // The APK written in is 0.8 of a session's progress; Android's own work, once
+                // the player confirms, the rest (run 681: a cancelled dialog left 0.8).
+                if (info != null && info.getProgress() > 0.81f) {
+                    Log.i(TAG, "update: Android is installing (" + info.getProgress() + ")");
+                    return;  // it ends with this process, or with an answer
+                }
+                Log.i(TAG, "update: no answer from Android's installer - Try again offered");
+                failure = "Android's installer was closed without installing.";
+                set(FAILED);
+            }, UNANSWERED_MS);
         }
     }
+
+    /** How long after the installer's dialog an answer may take before Try again (BUG-114). */
+    private static final long UNANSWERED_MS = 30_000;
 
     private void abandon() {
         int id = sessionId;
@@ -431,6 +455,7 @@ final class AppUpdate {
     }
 
     private void download() {
+        abandon();  // an earlier try's session, if Android never answered it (BUG-114)
         cancelled = false;
         percent = 0;
         set(DOWNLOADING);
@@ -525,6 +550,13 @@ final class AppUpdate {
         installed = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ignored, Intent intent) {
+                // BUG-114: only the current try's session. Try again gives the last one up,
+                // and its "abandoned" answer came in during the new download (run 681).
+                int id = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1);
+                if (id != sessionId) {
+                    Log.i(TAG, "update: an earlier session's answer ignored (" + id + ")");
+                    return;
+                }
                 int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS,
                         PackageInstaller.STATUS_FAILURE);
                 if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {

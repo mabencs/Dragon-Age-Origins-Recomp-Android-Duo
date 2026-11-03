@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Updating from the launcher could fail right after you tapped Install** in Android's dialog,
+  with "the install was cancelled": the launcher, back in front, cancelled the install Android
+  had just started. It now waits for Android's answer. If Android's dialog was closed without
+  installing, the row offers **Try again** after half a minute. This fix works from the version
+  after this one onwards; from 0.1.4-alpha and earlier, try again, or install the APK from the
+  releases page by hand over the app (your saves, game data and settings stay).
+
 ## 0.1.4-alpha - "Open Alpha"
 
 ### New

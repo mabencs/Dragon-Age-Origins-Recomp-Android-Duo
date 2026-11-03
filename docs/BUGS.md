@@ -83,6 +83,7 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-114](#bug-114) | our app (the update, PLAN 13.1) | high | **FIXED** (from the next version) | The launcher's update failed after Android's Install: the launcher, back in front, abandoned the session Android was installing - "the install was cancelled". In 0.1.2 to 0.1.4; mostly fails, sometimes wins |
 | [BUG-113](#bug-113) | our runtime (FSR 3.1's composite, frame generation's UI paste) | medium | **FIXED** | With FSR 3.1 the upper corners of the world juddered: the game's corner vignette, drawn after the capture, counted as UI, so the corners showed the jittered render-size frame |
 | [BUG-112](#bug-112) | our runtime (FSR 3.1) / a replaceable driver, dropped | medium | **FIXED** (the fallback); the driver work dropped | With FSR 3.1 chosen on a device where its upscaler cannot be made, the jitter stayed on: the whole world juddered under a still HUD. Found with Mesa's Turnip, which the owner then dropped |
 | [BUG-111](#bug-111) | our app (the update, PLAN 13.1) | medium | **FIXED** | Before it shipped: cancelling Android's first install dialog left the launcher's row on Installing for good, ignoring taps |
@@ -2936,6 +2937,35 @@ Measured at the King's Camp uncapped: 38.9 fps and 1,280 draws a frame without t
 queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 542-543).
 
 ---
+
+## BUG-114
+**The launcher's update failed after Android's Install**
+Our app (`AppUpdate.java`, PLAN 13.1) · severity high · **FIXED** session 43, from the version
+after 0.1.4-alpha
+
+**What it looked like** (the owner, 2026-11-03, 0.1.3 to 0.1.4 on the published app): the
+download verified, Android's dialog asked, the owner tapped Install - and the row said the update
+failed, the install cancelled. Three times running. (0.1.2 to 0.1.3, the same code, had worked.)
+
+**Cause.** BUG-111's fix. Android's first dialog (allow installs from this app) says nothing to
+the session when cancelled, so the launcher, back in front with the dialog shown, abandoned the
+session. But it is also back in front the moment the player taps Install, while Android installs:
+the log has `Integrity check passed for vmdl...tmp` and, 30 ms later, our `INSTALL_FAILED_ABORTED:
+Session was abandoned`. Whether Android's process kill or our resume came first decided it.
+
+**Fixed.** Back in front, nothing is abandoned: if no answer has come after 30 s and the
+session's progress shows no work of Android's (the APK written in is 0.8 of it; a cancelled
+dialog leaves 0.8), the row offers Try again, and only that tap gives the old session up. The
+installer's answers are taken only for the current session (Try again's abandon of the last one
+answered during the new download). Checked with DAO Debug updating itself in place from a local
+feed (a test build: the published package's check and https bypassed, never committed), run 681:
+the first-time dialog cancelled - Try again after 30 s; allowed, Update tapped - `back from
+Android's installer - waiting for its answer`, Android's `installPackageLI` 0.8 s later, the app
+0.1.4 to 0.1.5.
+
+**Players on 0.1.2 to 0.1.4** still have the old code: their launcher's update can fail this way
+(trying again may win the race), or they install the APK from the releases page by hand, over the
+app, keeping everything.
 
 ## BUG-113
 **With FSR 3.1 the upper corners of the world juddered**

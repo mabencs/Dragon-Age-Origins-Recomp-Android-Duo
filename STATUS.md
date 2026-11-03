@@ -1906,6 +1906,13 @@ Newest first. One short entry per session: what changed, what's next.
   **0.1.4-alpha** - the owner asked for "0.1.3.5", but 0.1.2's and 0.1.3's update check reads
   three numbers (and the version code follows three), so 0.1.3 would never be offered it; the
   owner chose 0.1.4. Not installed on the Thor either.
+- **BUG-114:** the owner's launcher update 0.1.3 to 0.1.4 failed after Android's Install, three
+  times (and on a screen recording): BUG-111's abandon on coming back to the launcher raced the
+  install Android had just begun. Fixed - nothing abandoned on the way back; Try again after
+  30 s without an answer; only the current session's answers taken. Checked with DAO Debug
+  updating itself from a local feed (run 681: cancel, Try again, allow, Update - installed in
+  place, twice). Committed, not released: 0.1.2-0.1.4 keep the bug, so their players retry or
+  install by hand. DAO Debug back on the normal build, the test feed and permission removed.
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

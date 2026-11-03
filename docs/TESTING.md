@@ -1296,6 +1296,18 @@ with the camera-turn presses about 749 a frame, without them about 2,130.
 
 ### The update check (PLAN 13.1)
 
+- **The install itself without the published app (BUG-114, run 681):** DAO Debug updating
+  itself in place, from a local feed. Test-only edits in the build clone, never committed:
+  `AppUpdate.read`'s `published` true, `connect` letting `http://127.0.0.1` through, and
+  `android:usesCleartextTraffic="true"` on the manifest's application. Build it twice
+  (`-Pwarden.version=` a lower and a higher version), serve the higher APK with `python -m
+  http.server 8765 --bind 127.0.0.1` and `adb reverse tcp:8765 tcp:8765`, and put a feed in
+  `files/update-feed` whose asset's `browser_download_url` is `http://127.0.0.1:8765/<apk>` with
+  its size and `sha256:` digest. `adb shell appops set dev.daorecompandroid.duo
+  REQUEST_INSTALL_PACKAGES default|allow` gives Android's first-time dialog or skips it. After:
+  revert the edits, reinstall the normal debug build, remove the feed, the reverse and the server,
+  and set the permission back to `default`. Never with the published app.
+
 - A real update: `gradlew :app:assembleRelease -Pwarden.version=<an older version>`, install it
   (it is a separate app from the debug build, with no game data), open its launcher, and the
   newest release on GitHub is offered. Remove it after. Its first install asks to allow installs
