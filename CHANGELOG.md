@@ -7,8 +7,8 @@
 - **Less CPU work while the game waits.** The game's main thread no longer spins a processor core
   while it waits for its render thread, and a diagnostic record of the game's functions is now kept
   only in Debugging Mode. Together about a fifth less CPU work, at the same frame rate. On the AYN
-  Thor's own performance profile this barely changes the temperature, which is set by the GPU
-  running at full speed; on lighter profiles and other devices it may run cooler.
+  Thor this barely changes the temperature: the game keeps the GPU at full speed every frame, as
+  other demanding games do, and that is where the heat comes from.
 
 ## 0.1.8-alpha - "Open Alpha"
 

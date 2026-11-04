@@ -1952,8 +1952,9 @@ Newest first. One short entry per session: what changed, what's next.
   wait, the main thread's Sleep(0) hand-off) and the guest trace costs every function's entry.
   Fixed in the runtime: Sleep(0) streaks nap, the trace only in Debugging Mode - 3.0-3.1 cores to
   2.5 at the same frame rate. But the Thor's power and temperatures did not move (about 10 W, big
-  cores 94.7 C): its firmware profile holds the CPU clocks high (two busy loops added 0.2 W), and
-  the heat is the GPU's at its ceiling. The fence wait asleep was built and measured (the render
+  cores 94.7 C): the game keeps the clusters busy (two busy loops added 0.2 W) and the GPU at its
+  ceiling, as Dusklight does beside it (9.41 W against 9.16; Dusklight's GPU sensors 5 C cooler).
+  Not the firmware holding the clocks, as first written (the owner corrected it). The fence wait asleep was built and measured (the render
   thread 98% to 25%) but left out: it changes the game code's ABI for no gain on the Thor.
   Measured with the USB-PD input's power (runs 697-703).
 
