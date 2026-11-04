@@ -2994,8 +2994,7 @@ the player's own, at its cost): a section of three options, all off by default a
   the read pointer back (command_processor.cc, after `store_and_swap` of read_ptr_writeback_ptr_),
   at most 2 ms; the loop then checks the fence again. An override, so the game code's ABI changes
   (74aa2ee2adfcb1e2 against 1961314d8a1bb6ae): every player's Build again once, about eight
-  minutes. No stutter measured: runs 724-727 in the Wilds, off and on in turn, no game frame over
-  50 ms in any.
+  minutes.
 - **Lower the frame rate when hot** (`files/thermal-guard`, PLAN 10.2's guard) now steps at the GPU
   75 C or a big core 88 C, lifting at 62 / 72: at 90 C on the GPU only, it never acted with the
   fan running. Run 731 (120, frame generation off, the rests off): 120 -> 60 -> 45 -> 30 in 90 s,
@@ -3015,6 +3014,17 @@ power from its USB-PD input with the battery full:
 | 720 / 719 | Frame rate 30, Lossless 2x: nothing / CPU rest | 15.1 / 15.1 | 13.6 / 14.2 | 71.1 (82.4) / 53.8 (57.7) | 61.3 / 50.3 | 50.1 / 42.9 | (charging) | the main thread 105% / 23% |
 | 721 / 722 / 723 | 120, Lossless 2x: nothing / CPU rest / both | 29.5 / 29.7 / 30.0 | 23.8 / 26.5 / 26.7 | 84.2 (94.5) / 83.6 (93.9) / 73.0 (78.4) | 78.3 / 78.1 / 70.2 | 60.7 / 60.7 / 55.4 | (charging) / 9.77 / 9.07 W | the render thread 98.5% / - / 24.9% |
 | 728 / 729 / 730 | 120, frame generation off: nothing / CPU rest / both | 40.3 / 40.5 / 40.5 | 25.2 / 31.8 / 34.9 | 85.8 (94.9) / 84.3 (94.5) / 80.5 (85.4) | 80.5 / 79.9 / 76.0 | 62.4 / 62.2 / 59.7 | 10.42 / 10.61 / 10.00 W | 3.05 / 2.63 / 1.87 cores |
+| 738 / 739 | 30, frame generation off: nothing / both | 30.0 / 30.0 | 22.5 / 27.5 | 84.2 (94.6) / 69.6 (73.6) | 75.0 / 65.5 | 59.8 / 53.5 | 10.49 / 7.78 W | 2.81 / 1.57 cores |
+
+Stutter (game frames over 50 ms, the log's `frame times: a title frame of`): at the camp, the last
+four minutes, 11 -> 0 at 30 (runs 738/739) and 2 -> 0 at 120 (728/730). The Korcari Wilds route
+at 30, frame generation off (runs 740-743, nothing / both / nothing / both, about 130 s of walking
+and the wolves' fight each): 34 / 33 / 35 / 39 frames over 50 ms, none over 100, the worst 93 / 87
+/ 89 / 99 ms; 30.1 fps throughout, the 1% low 20.6 / 20.6 / 19.7 / 21.0 - the same within the
+runs' spread. **The log stops at 200 lines a session:** at a game rate of 15 (Frame rate 30 with
+Lossless 2x) every frame is over 50 ms and the 200 are gone on the title screen, so runs 719-720
+and 724-727 counted nothing - their "no frame over 50 ms" meant nothing. Check the count stays
+under 200 before reading one.
 
 So neither rest costs frame rate - the 1% lows rise with them - and together they take the hottest
 big core down 9.5 C uncapped, 16 C with Lossless 2x and 25 C at Frame rate 30 (the CPU rest alone there). The CPU rest alone does most where the frame rate is capped (the main

@@ -1,31 +1,47 @@
 # Changelog
 
-## Unreleased
+## 0.1.9-alpha - "Open Alpha"
+
+<!-- manual-update -->
 
 ### Changed
 
 - **Heat guard is now a section of its own in Settings**, with three ways to run cooler, each off
   by default and each turned on or off by itself:
-  - **Lower the frame rate when hot** - the old Heat guard. It now steps in at temperatures a
-    Thor with its fan running actually reaches (the GPU at 75 C or a big CPU core at 88 C).
-    Before, it waited for 90 C on the GPU and never acted. Use it with the two rests below:
-    without them the CPU stays hot even at a lower frame rate.
   - **Rest the CPU in the game's waits** - the game's main thread rests instead of spinning a
-    processor core while it waits for its other threads. The biggest help with a frame-rate cap:
-    at Frame rate 30 the hottest CPU core ran at 58 C instead of 82 C. It can add a little
-    stutter.
-  - **Rest the CPU while the GPU draws** - the game's render thread sleeps instead of spinning
-    while it waits for the GPU. Uncapped, with both rests on, the hottest CPU core ran 9-16 C
-    cooler, at the same frame rate.
-- **Both rests together cost no frame rate** in our tests at the King's Camp, and the slowest
-  frames got a little faster.
+    processor core while it waits for its other threads. It can add a little stutter.
+  - **Rest the CPU while the GPU draws** - the game's render thread sleeps instead of spinning a
+    processor core while it waits for the GPU.
+  - **Lower the frame rate when hot** - the old Heat guard. It now steps in at temperatures an AYN
+    Thor with its fan running actually reaches (the GPU at 75 C or a CPU core at 88 C). Before,
+    it waited for 90 C on the GPU and never acted. Use it with the two rests: without them the
+    CPU stays hot even at a lower frame rate.
 - **A diagnostic record of the game's functions is now kept only in Debugging Mode**, for less
   CPU work.
 
+### Measured: both rests on against Heat guard off
+
+On the AYN Thor, with frame generation off, 1360x768, FXAA and FSR 3.1 off, and the fan at a fixed
+50% above 45 C. At the King's Camp each run was 12 minutes, and the numbers are from its last four,
+once the heat had levelled out. In the Korcari Wilds, two runs each of walking forward and the
+wolves' fight, about two minutes each. A stutter is a frame that took more than 50 ms.
+
+| Where | Frame rate setting | fps | 1% low fps | Stutters | Hottest CPU core | GPU | Power |
+|---|---|---|---|---|---|---|---|
+| King's Camp | 30 | 30.0 → 30.0 | 22.5 → 27.5 | 11 → 0 in 4 min | 94.6 → 73.6 C (−21) | 75.0 → 65.5 C (−9.5) | 10.5 → 7.8 W |
+| King's Camp | 120 | 40.3 → 40.5 | 25.2 → 34.9 | 2 → 0 in 4 min | 94.9 → 85.4 C (−9.5) | 80.5 → 76.0 C (−4.5) | 10.4 → 10.0 W |
+| Korcari Wilds, walk and fight | 30 | 30.1 → 30.1 | 20.2 → 20.8 | 34.5 → 36 a run, none over 100 ms | - | - | - |
+
+So the rests cost no frame rate, the slowest frames got faster, and the handheld runs much cooler,
+most of all with a frame-rate cap. In the Wilds the stutters stayed about the same.
+
 ### Installing
 
-- **After updating, choose Build again once** in the launcher (about eight minutes). The new
-  rest for the render thread needs the game's code made again. Your saves and settings stay.
+- **This update is installed by hand.** The launcher shows **Manual update**, which opens this
+  page: download the APK below and install it over the app. Your saves, game data and settings
+  stay.
+- **Then choose Build again** in the launcher, once (about eight minutes). The new rest for the
+  render thread needs the game's code made again.
 
 ## 0.1.8-alpha - "Open Alpha"
 

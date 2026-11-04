@@ -7,10 +7,10 @@ starts by re-deriving context that was already paid for.
 | | |
 |---|---|
 | **Last updated** | 2026-11-04 (session 44) |
-| **Version** | **0.1.8-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-03, the tag `v0.1.8-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
+| **Version** | **0.1.9-alpha, "Open Alpha"** (`CHANGELOG.md`; built 2026-11-04, a manual update - players Build again - not yet published; 0.1.8-alpha published 2026-11-03, the tag `v0.1.8-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **Unreleased: Options -> Heat guard's section (BUG-117, session 44)** - its CPU-while-the-GPU-draws rest changes the game code's ABI, so the next release asks every player to Build again once (say so in its notes). Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
+| **Next action** | **0.1.9-alpha built, the owner to review its notes** (Options -> Heat guard's section, BUG-117): a manual update (`<!-- manual-update -->`), as its GPU rest changes the game code's ABI and every player builds again once. Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -1884,8 +1884,11 @@ Newest first. One short entry per session: what changed, what's next.
 - **Measured** (runs 718-730, docs/BUGS.md BUG-117's table): no frame rate lost (120 with frame
   generation off: 40.3, 40.5, 40.5; the 1% low 25.2, 31.8, 34.9). The hottest big core: Frame
   rate 30 82.4 -> 57.7 C with the CPU rest; 120 with Lossless 2x 94.5 -> 78.4 with both; 120
-  without frame generation 94.9 -> 85.4. The GPU rest added no stutter in the Wilds (runs
-  724-727: no frame over 50 ms off or on). Run 731: the frame-rate guard alone, uncapped -
+  without frame generation 94.9 -> 85.4. Frame generation off (the owner): at 30 the hottest core 94.6 ->
+  73.6 C, 10.5 -> 7.8 W, the stutters 11 -> 0 in four minutes (runs 738-739); the Wilds' walk and
+  fight about the same (34.5 -> 36 frames over 50 ms a run, none over 100; runs 740-743). Runs
+  724-727's stutter counts were void: the long-frame log's 200 lines were used up on the title
+  screen at a game rate of 15. Run 731: the frame-rate guard alone, uncapped -
   120 -> 60 -> 45 -> 30 in 90 s on a big core over 88 C, but at 30 the cores stayed at 84 C
   (the waits spinning): best with the rests, its text says.
 - BUG-118: `tools/push_gamecode.py` never wrote the manifest (the JSON's quotes lost in adb's shell): the
