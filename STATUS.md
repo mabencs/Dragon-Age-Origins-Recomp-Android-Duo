@@ -7,10 +7,10 @@ starts by re-deriving context that was already paid for.
 | | |
 |---|---|
 | **Last updated** | 2026-11-04 (session 44) |
-| **Version** | **0.1.9-alpha, "Open Alpha"** (`CHANGELOG.md`; built 2026-11-04, a manual update - players Build again - not yet published; 0.1.8-alpha published 2026-11-03, the tag `v0.1.8-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
+| **Version** | **0.2.0-alpha, "Open Alpha"** (`CHANGELOG.md`; built 2026-11-04 - 0.2 as it asks every player to build again, a manual update - players Build again - not yet published; 0.1.8-alpha published 2026-11-03, the tag `v0.1.8-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **0.1.9-alpha built, the owner to review its notes** (Options -> Heat guard's section, the two rests on by default, BUG-117): a manual update (`<!-- manual-update -->`), as its GPU rest changes the game code's ABI and every player builds again once. Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
+| **Next action** | **0.2.0-alpha built, the owner to review its notes** (Options -> Heat guard's section, the two rests on by default, BUG-117): a manual update (`<!-- manual-update -->`), as its GPU rest changes the game code's ABI and every player builds again once. Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -1893,7 +1893,7 @@ Newest first. One short entry per session: what changed, what's next.
   (the waits spinning): best with the rests, its text says.
 - **The two rests on by default** (the owner, after the full table of runs 718-743: no frame rate
   lost anywhere): `files/heat-cpu-rest` / `heat-gpu-wait` on unless they hold `off`, the options'
-  defaults On; the frame-rate guard stays Off. 0.1.9-alpha rebuilt with them, not published.
+  defaults On; the frame-rate guard stays Off. Built as 0.2.0-alpha (the owner: major enough to need a rebuild), not published.
 - BUG-118: `tools/push_gamecode.py` never wrote the manifest (the JSON's quotes lost in adb's shell): the
   launcher asked to build again after a push. It now pushes it as a file, even when the library
   is already there.

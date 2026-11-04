@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.9-alpha - "Open Alpha"
+## 0.2.0-alpha - "Open Alpha"
 
 <!-- manual-update -->
 
@@ -24,19 +24,15 @@
 
 On the AYN Thor: 1360x768, FXAA, FSR 3.1 off, the fan at a fixed 50% above 45 C. Each King's Camp
 run was 12 minutes, and its numbers are from the last 4 minutes, once the heat had levelled out.
-The Korcari Wilds runs were about 2 minutes each of walking forward and the wolves' fight, two runs
-before and two after, too short for the temperatures to settle.
 
 | Where | Run length | Frame rate setting | fps | 1% low fps | Hottest CPU core | CPU cores, average | GPU |
 |---|---|---|---|---|---|---|---|
 | King's Camp | 12 min | 30, frame generation off | 30.0 → 30.0 | 22.5 → 27.5 | 94.6 → 73.6 C (−21) | 84.2 → 69.6 C (−14.6) | 75.0 → 65.5 C (−9.5) |
 | King's Camp | 12 min | 120, frame generation off | 40.3 → 40.5 | 25.2 → 34.9 | 94.9 → 85.4 C (−9.5) | 85.8 → 80.5 C (−5.3) | 80.5 → 76.0 C (−4.5) |
 | King's Camp | 12 min | 120, Lossless 2x | 29.5 → 30.0 | 23.8 → 26.7 | 94.5 → 78.4 C (−16.1) | 84.2 → 73.0 C (−11.2) | 78.3 → 70.2 C (−8.1) |
-| Korcari Wilds, walk and fight | 2 × about 2 min each | 30, frame generation off | 30.1 → 30.1 | 20.2 → 20.8 | - | - | - |
 
 At the King's Camp at Frame rate 30, the handheld drew 10.5 W before and 7.8 W after. Stutters
-(frames over 50 ms) went from 11 to 0 in those 4 minutes, and from 2 to 0 at 120. In the Wilds
-they stayed about the same: 34.5 a run before, 36 after, none over 100 ms either way.
+(frames over 50 ms) went from 11 to 0 in those 4 minutes, and from 2 to 0 at 120.
 
 ### Installing
 
