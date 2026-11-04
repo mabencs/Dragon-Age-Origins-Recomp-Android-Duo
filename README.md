@@ -2,7 +2,7 @@
 
 *Disclaimer, all the work done by "me" in this repo, was done by Claude.*
 
-**Version 0.1 — Open Alpha** · Dragon Age: Origins for the Xbox 360, natively recompiled for
+**Version 0.2 — Open Alpha** · Dragon Age: Origins for the Xbox 360, natively recompiled for
 Android, made for the **AYN Thor** and its two screens.
 
 The duo screen functionality can be turned off for single-screen devices.
@@ -32,7 +32,7 @@ as a native Android app, with the lower screen as a companion display.
 ## Contents
 
 - [What it does](#what-it-does)
-- [Status: 0.1 Open Alpha](#status-01-open-alpha)
+- [Status: 0.2 Open Alpha](#status-02-open-alpha)
 - [What you need](#what-you-need)
 - [Installing the app](#installing-the-app)
 - [Setting up on the device](#setting-up-on-the-device)
@@ -59,9 +59,13 @@ as a native Android app, with the lower screen as a companion display.
   - FSR 3.1 upscaling, with FSR 3.1's own frame generation;
   - Lossless Scaling frame generation (through lsfg-vk, with your own `Lossless.dll`);
   - HDR10 and wide-gamut colour;
-  - rendering resolutions from 960×540 to 2560×1440, field of view, and anisotropic
-    filtering;
-  - motion blur and cinematic depth of field.
+  - rendering resolutions from 960×540 to 2560×1440, a 4:3 aspect ratio (experimental), field
+    of view, and anisotropic filtering;
+  - motion blur, cinematic depth of field, and the corner vignette on or off.
+- **Runs cool.** The game's threads rest the CPU while they wait, instead of spinning it as on
+  the console. On the Thor at 30 fps the hottest CPU core runs about 21 °C cooler and the
+  handheld draws about a quarter less power, at the same frame rate (**Heat guard** in the
+  settings).
 - **A companion deck on the second screen.** It shows your party's portraits, health and
   mana, a quickbar you can tap to use, quests, the area map, tactics, the codex and journal,
   your items, and performance numbers.
@@ -83,7 +87,7 @@ as a native Android app, with the lower screen as a companion display.
 
 ---
 
-## Status: 0.1 Open Alpha
+## Status: 0.2 Open Alpha
 
 The game is playable from character creation onwards. Each piece below has been tested on
 the device:
@@ -114,7 +118,9 @@ screen.
   them 45–60 ([`docs/AREAS.md`](docs/AREAS.md));
 - the heaviest scene known, Ostagar's King's Camp, runs at 37 fps that way, and at 44 at
   the default settings;
-- so the default 60 fps cap is held in the lighter scenes only.
+- so the default 60 fps cap is held in the lighter scenes only;
+- the heat stays moderate: at the King's Camp at 30 fps, after 12 minutes, the hottest CPU
+  core sits at about 74 °C and the GPU at 66 °C, drawing 7.8 W (the fan at 50%).
 
 FSR 3.1 and frame generation trade sharpness or latency for smoothness. See
 [Recommended settings](#recommended-settings).
@@ -248,7 +254,8 @@ to allow installs from this app. The app closes as it installs: open it again. W
 connection there is simply no row, and the game plays as ever.
 
 A row that says **Manual update** opens the release's page instead: that version has to be
-installed by hand, and its notes say why. **See releases on GitHub**, under **Launch Dragon
+installed by hand, and its notes say why. Usually it is because the game's program must be made
+again: after installing it, choose **Build again** in the launcher. **See releases on GitHub**, under **Launch Dragon
 Age**, opens the list of every release and its changes in your browser at any time.
 
 ### The launcher
@@ -376,17 +383,17 @@ the game. Tap the tabs along the top.
 | **Party** | Each member's portrait, name, class, health, and mana or stamina, with level-up, poison and paralysis marked. |
 | **Quickbar** | The selected character's quick slots, large enough for a thumb. A tap uses the slot, as its button would (in exploration and combat). |
 | **Quests** | The journal's two pages, current and completed quests, in the game's groups. A tap unfolds a group, and a quest for its text. |
-| **Map** | The area, turned as the game's own map screen shows it: the party, and each place and person as an icon of what it is - a moneybag for a merchant, an anvil for a smith, an exclamation mark for a quest giver, a door for an exit. A tap on an icon shows its name; tap again to hide it. Pinch to zoom, drag to pan. |
+| **Map** | The area, facing the same way as the game's own map screen and minimap: the party as small icons that move as it walks, the character you control ringed in gold, and each place and person as an icon of what it is - a moneybag for a merchant, an anvil for a smith, an exclamation mark for a quest giver, a door for an exit. A tap on an icon shows its name; tap again to hide it. Pinch to zoom, drag to pan. |
 | **Tactics** | Each member's tactics slots: condition, command and target. |
 | **Codex** | The codex entries you have found, by category: a tap unfolds a category, and an entry to read it. The journal's conversations below. |
 | **Items** | What each member wears, the backpack, and the purse. A tap shows an item's stats, properties, requirements and text. **Equip**, **Use** and **Unequip** act for the character selected in the game (in exploration and combat). |
 | **Perf** | With *Performance tab/overlay* on: frames a second, frame times, the 1% low, power, battery and the GPU. |
 
-On AYN devices the game's sound follows the media volume through the app itself, because
-the firmware does not apply it to the game's sound; Volume boost is applied first.
+The game's sound follows Android's media volume, with Volume boost on top of it.
 
-The deck runs in its own process, so a fault in it never stops the game. It leaves the second
-screen when you put the game away, and comes back with it.
+The deck is a window of the game's own, shown on the second screen. A fault in it closes the
+deck, never the game. It leaves the second screen when you put the game away, and comes back
+with it.
 
 ---
 
@@ -634,7 +641,6 @@ licence text, and [`THIRD_PARTY.md`](THIRD_PARTY.md) has the same with the pinne
 | [AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK) | FSR 3.1 upscaling and frame generation | MIT |
 | [FFmpeg](https://github.com/has207/FFmpeg) | The game's XMA audio | LGPL-2.1 |
 | [libarchive](https://github.com/libarchive/libarchive), [7-Zip's C decoder](https://github.com/ip7z/7zip) | .rar and .7z mod imports | BSD 2-Clause, public domain |
-
 | [LLVM](https://github.com/llvm/llvm-project) | clang and lld, which make the game's program on the device | Apache-2.0 WITH LLVM-exception |
 
 …and the rest of the 28 in [`THIRD_PARTY.md`](THIRD_PARTY.md).

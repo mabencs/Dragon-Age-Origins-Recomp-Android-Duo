@@ -1894,6 +1894,10 @@ Newest first. One short entry per session: what changed, what's next.
 - **The two rests on by default** (the owner, after the full table of runs 718-743: no frame rate
   lost anywhere): `files/heat-cpu-rest` / `heat-gpu-wait` on unless they hold `off`, the options'
   defaults On; the frame-rate guard stays Off. Built as 0.2.0-alpha (the owner: major enough to need a rebuild), not published.
+- **README brought up to 0.2** (the owner): the version, running cool and the heat at the camp, 4:3
+  and the vignette in the features, the deck's map (north as the game's map, the party's icons),
+  the volume and the deck's window since BUG-116, manual updates and Build again, the licence
+  table's LLVM row.
 - BUG-118: `tools/push_gamecode.py` never wrote the manifest (the JSON's quotes lost in adb's shell): the
   launcher asked to build again after a push. It now pushes it as a file, even when the library
   is already there.
