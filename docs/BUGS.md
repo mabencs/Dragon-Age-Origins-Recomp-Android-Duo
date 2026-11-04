@@ -2983,7 +2983,9 @@ FXAA): big cores 94-95 C, the GPU 87-90 C at its 680 MHz ceiling, the board 64-7
   the slow way.
 
 **Fixed - Options -> Heat guard** (session 44, the owner, 2026-11-04: each way of running cooler
-the player's own, at its cost): a section of three options, all off by default and live.
+the player's own, at its cost): a section of three options, all live. The two rests are **on by
+default** (the owner, after the measurements below: no frame rate lost; a file holding `off` turns
+one off), the frame-rate guard off.
 - **Rest the CPU in the game's waits** (`files/heat-cpu-rest`): a Sleep(0) or NtYieldExecution
   within 200 us of the last, from the eighth in a row, naps 30 us instead of yielding
   (`YieldOrNap`); a lone one between pieces of work still yields. The answer is seen up to a nap

@@ -6,34 +6,37 @@
 
 ### Changed
 
-- **Heat guard is now a section of its own in Settings**, with three ways to run cooler, each off
-  by default and each turned on or off by itself:
-  - **Rest the CPU in the game's waits** - the game's main thread rests instead of spinning a
-    processor core while it waits for its other threads. It can add a little stutter.
-  - **Rest the CPU while the GPU draws** - the game's render thread sleeps instead of spinning a
-    processor core while it waits for the GPU.
-  - **Lower the frame rate when hot** - the old Heat guard. It now steps in at temperatures an AYN
-    Thor with its fan running actually reaches (the GPU at 75 C or a CPU core at 88 C). Before,
-    it waited for 90 C on the GPU and never acted. Use it with the two rests: without them the
-    CPU stays hot even at a lower frame rate.
+- **The game runs much cooler, at the same frame rate.** The game's threads used to keep CPU cores
+  spinning flat out while they waited, for each other and for the GPU. Now they rest while they
+  wait. This is on by default. On the AYN Thor at Frame rate 30, the hottest CPU core runs about
+  21 C cooler and the handheld draws about a quarter less power.
+- **Heat guard is now a section of its own in Settings**, with three options, each turned on or
+  off by itself:
+  - **Rest the CPU in the game's waits** - on by default. If you notice stutter, try it off.
+  - **Rest the CPU while the GPU draws** - on by default.
+  - **Lower the frame rate when hot** - the old Heat guard, still off by default. It now steps in
+    at temperatures an AYN Thor with its fan running actually reaches (the GPU at 75 C or a CPU
+    core at 88 C). Before, it waited for 90 C on the GPU and never acted.
 - **A diagnostic record of the game's functions is now kept only in Debugging Mode**, for less
   CPU work.
 
-### Measured: both rests on against Heat guard off
+### Measured: before (both rests off) and after (both on)
 
-On the AYN Thor, with frame generation off, 1360x768, FXAA and FSR 3.1 off, and the fan at a fixed
-50% above 45 C. At the King's Camp each run was 12 minutes, and the numbers are from its last four,
-once the heat had levelled out. In the Korcari Wilds, two runs each of walking forward and the
-wolves' fight, about two minutes each. A stutter is a frame that took more than 50 ms.
+On the AYN Thor: 1360x768, FXAA, FSR 3.1 off, the fan at a fixed 50% above 45 C. Each King's Camp
+run was 12 minutes, and its numbers are from the last 4 minutes, once the heat had levelled out.
+The Korcari Wilds runs were about 2 minutes each of walking forward and the wolves' fight, two runs
+before and two after, too short for the temperatures to settle.
 
-| Where | Frame rate setting | fps | 1% low fps | Stutters | Hottest CPU core | GPU | Power |
+| Where | Run length | Frame rate setting | fps | 1% low fps | Hottest CPU core | CPU cores, average | GPU |
 |---|---|---|---|---|---|---|---|
-| King's Camp | 30 | 30.0 → 30.0 | 22.5 → 27.5 | 11 → 0 in 4 min | 94.6 → 73.6 C (−21) | 75.0 → 65.5 C (−9.5) | 10.5 → 7.8 W |
-| King's Camp | 120 | 40.3 → 40.5 | 25.2 → 34.9 | 2 → 0 in 4 min | 94.9 → 85.4 C (−9.5) | 80.5 → 76.0 C (−4.5) | 10.4 → 10.0 W |
-| Korcari Wilds, walk and fight | 30 | 30.1 → 30.1 | 20.2 → 20.8 | 34.5 → 36 a run, none over 100 ms | - | - | - |
+| King's Camp | 12 min | 30, frame generation off | 30.0 → 30.0 | 22.5 → 27.5 | 94.6 → 73.6 C (−21) | 84.2 → 69.6 C (−14.6) | 75.0 → 65.5 C (−9.5) |
+| King's Camp | 12 min | 120, frame generation off | 40.3 → 40.5 | 25.2 → 34.9 | 94.9 → 85.4 C (−9.5) | 85.8 → 80.5 C (−5.3) | 80.5 → 76.0 C (−4.5) |
+| King's Camp | 12 min | 120, Lossless 2x | 29.5 → 30.0 | 23.8 → 26.7 | 94.5 → 78.4 C (−16.1) | 84.2 → 73.0 C (−11.2) | 78.3 → 70.2 C (−8.1) |
+| Korcari Wilds, walk and fight | 2 × about 2 min each | 30, frame generation off | 30.1 → 30.1 | 20.2 → 20.8 | - | - | - |
 
-So the rests cost no frame rate, the slowest frames got faster, and the handheld runs much cooler,
-most of all with a frame-rate cap. In the Wilds the stutters stayed about the same.
+At the King's Camp at Frame rate 30, the handheld drew 10.5 W before and 7.8 W after. Stutters
+(frames over 50 ms) went from 11 to 0 in those 4 minutes, and from 2 to 0 at 120. In the Wilds
+they stayed about the same: 34.5 a run before, 36 after, none over 100 ms either way.
 
 ### Installing
 

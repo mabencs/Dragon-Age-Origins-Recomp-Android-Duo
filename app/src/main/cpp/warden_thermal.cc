@@ -338,14 +338,16 @@ namespace {
 std::atomic<int> g_cpu_rest{-1};
 std::atomic<int> g_gpu_wait{-1};
 
+// On unless the file says "off" (the owner, 2026-11-04: both rests on by default - no frame
+// rate lost, much cooler; BUG-117).
 bool Switch(std::atomic<int>& value, const char* file) {
   int seen = value.load(std::memory_order_relaxed);
   if (seen < 0) {
-    bool on = false;
+    bool on = true;
     if (const char* dir = std::getenv("WARDEN_FILES_DIR")) {
       if (FILE* f = std::fopen((std::string(dir) + "/" + file).c_str(), "r")) {
         char text[16] = {};
-        on = std::fscanf(f, "%15s", text) == 1 && std::strcmp(text, "on") == 0;
+        on = !(std::fscanf(f, "%15s", text) == 1 && std::strcmp(text, "off") == 0);
         std::fclose(f);
       }
     }

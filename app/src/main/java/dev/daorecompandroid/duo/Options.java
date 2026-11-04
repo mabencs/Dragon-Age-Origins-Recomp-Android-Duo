@@ -378,8 +378,8 @@ final class Options {
                 new String[] {"closed", "open"},
                 new String[] {"Show", "Hide"},
                 new String[] {
-                    "Ways to run cooler, each at some cost: show them to choose.",
-                    "Ways to run cooler, each at some cost, each on or off by itself.",
+                    "Ways to run cooler: show them to choose.",
+                    "Ways to run cooler, each on or off by itself.",
                 }).asSection(),
         new Option("thermal-guard", "Lower the frame rate when hot", "off", true,
                 new String[] {"off", "on"},
@@ -391,24 +391,24 @@ final class Options {
                             + " a minute cooler; 30 in battery saver. Best with the rests below:"
                             + " without them the CPU stays hot even at 30.",
                 }).inGroup("heat"),
-        new Option("heat-cpu-rest", "Rest the CPU in the game's waits", "off", true,
+        // Both rests on by default (the owner, 2026-11-04): no frame rate lost, much cooler.
+        new Option("heat-cpu-rest", "Rest the CPU in the game's waits", "on", true,
                 new String[] {"off", "on"},
                 new String[] {"Off", "On"},
                 new String[] {
                     "The game waits for its other threads as on the console, keeping a core"
-                            + " busy.",
-                    "The game's waits rest the core instead: much cooler with the frame"
-                            + " rate capped (at 30, the big cores 54 C against 71), but it can"
-                            + " add a little stutter.",
+                            + " busy: hotter, at the same frame rate.",
+                    "The game's waits rest the core instead: much cooler, most of all with the"
+                            + " frame rate capped. If you notice stutter, try it off.",
                 }).inGroup("heat"),
-        new Option("heat-gpu-wait", "Rest the CPU while the GPU draws", "off", true,
+        new Option("heat-gpu-wait", "Rest the CPU while the GPU draws", "on", true,
                 new String[] {"off", "on"},
                 new String[] {"Off", "On"},
                 new String[] {
-                    "The game waits for the GPU as on the console, keeping a core busy.",
+                    "The game waits for the GPU as on the console, keeping a core busy:"
+                            + " hotter, at the same frame rate.",
                     "The render thread sleeps until the GPU has moved on: cooler at the same"
-                            + " frame rate (uncapped at the King's Camp, the hottest core 85 C"
-                            + " against 94).",
+                            + " frame rate.",
                 }).inGroup("heat"),
         // PLAN 9.12: on headphones, the speakers' mixdown, or the game's five speakers
         // placed around the listener (warden_audio_mix.cc). The speakers always get the

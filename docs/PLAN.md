@@ -2787,7 +2787,8 @@ behind the owner's (CLAUDE.md).
       the charger unplugged, `dumpsys battery unplug`, and reset it). Resolution scaling is
       not part of it: FSR 3.1's mode is taken at the start.
       **Session 44 (BUG-117, the owner, 2026-11-04): Heat guard a section.** Its row opens
-      and closes three options, each Off by default and live (`Option.asSection()`,
+      and closes three options, each live - the frame-rate guard Off by default, the two
+      rests On (the owner, after runs 728-743: no frame rate lost) (`Option.asSection()`,
       `inGroup("heat")`; `files/heat` holds `open` or `closed`, the panel's alone):
       **Lower the frame rate when hot** (`files/thermal-guard`, the above, now stepping at
       the GPU 75 C or a big core 88 C and lifting at 62 / 72 - 90 C was never reached with
