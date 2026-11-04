@@ -32,6 +32,14 @@ final class Options {
         final String defaultValue;
         /** Taken while the game runs; otherwise from the next start. */
         final boolean live;
+        /**
+         * The owner (2026-11-04): a section's header - a row that opens and closes its
+         * group's rows (its file holds "open" or "closed": the panel's own, the game's
+         * nothing).
+         */
+        boolean section;
+        /** The section's file this option is shown under, or null. */
+        String group;
 
         Option(String file, String title, String defaultValue, boolean live,
                String[] values, String[] labels, String[] details) {
@@ -42,6 +50,16 @@ final class Options {
             this.values = values;
             this.labels = labels;
             this.details = details;
+        }
+
+        Option asSection() {
+            section = true;
+            return this;
+        }
+
+        Option inGroup(String sectionFile) {
+            group = sectionFile;
+            return this;
         }
 
         int indexOf(String value) {
@@ -354,15 +372,44 @@ final class Options {
         // while the GPU is hot (the system's own cap on it, or 90 C) and back after a minute
         // cooler, and 30 in battery saver. Off unless chosen (the owner, 2026-10-31); the
         // Thor did not throttle in 14 minutes at the camp at the heaviest settings (run 475).
-        new Option("thermal-guard", "Heat guard", "off", true,
+        // BUG-117 (the owner, 2026-11-04): Heat guard a section of its own, each way of running
+        // cooler an option inside it - each costs something, so each is the player's.
+        new Option("heat", "Heat guard", "closed", true,
+                new String[] {"closed", "open"},
+                new String[] {"Show", "Hide"},
+                new String[] {
+                    "Ways to run cooler, each at some cost: show them to choose.",
+                    "Ways to run cooler, each at some cost, each on or off by itself.",
+                }).asSection(),
+        new Option("thermal-guard", "Lower the frame rate when hot", "off", true,
                 new String[] {"off", "on"},
                 new String[] {"Off", "On"},
                 new String[] {
                     "The frame rate stays as set, however warm the handheld gets.",
-                    "The frame rate a step lower while the GPU is hot (90 C, or the"
-                            + " system's own limit), back after a minute cooler; 30 in"
-                            + " battery saver.",
-                }),
+                    "The frame rate a step lower while the handheld is hot (the GPU at 75 C"
+                            + " or a big core at 88 C, or the system's own limit), back after"
+                            + " a minute cooler; 30 in battery saver. Best with the rests below:"
+                            + " without them the CPU stays hot even at 30.",
+                }).inGroup("heat"),
+        new Option("heat-cpu-rest", "Rest the CPU in the game's waits", "off", true,
+                new String[] {"off", "on"},
+                new String[] {"Off", "On"},
+                new String[] {
+                    "The game waits for its other threads as on the console, keeping a core"
+                            + " busy.",
+                    "The game's waits rest the core instead: much cooler with the frame"
+                            + " rate capped (at 30, the big cores 54 C against 71), but it can"
+                            + " add a little stutter.",
+                }).inGroup("heat"),
+        new Option("heat-gpu-wait", "Rest the CPU while the GPU draws", "off", true,
+                new String[] {"off", "on"},
+                new String[] {"Off", "On"},
+                new String[] {
+                    "The game waits for the GPU as on the console, keeping a core busy.",
+                    "The render thread sleeps until the GPU has moved on: cooler at the same"
+                            + " frame rate (uncapped at the King's Camp, the hottest core 85 C"
+                            + " against 94).",
+                }).inGroup("heat"),
         // PLAN 9.12: on headphones, the speakers' mixdown, or the game's five speakers
         // placed around the listener (warden_audio_mix.cc). The speakers always get the
         // mixdown. Stereo unless chosen (the owner, 10.1).

@@ -574,6 +574,10 @@ bool Runtime::ApplyOption(const std::string& name, const std::string& value) {
     SetAutosaveOnPause(value == "on");
   } else if (name == "thermal-guard") {
     thermal::SetGuard(value == "on");  // PLAN 10.2
+  } else if (name == "heat-cpu-rest") {
+    thermal::SetCpuRest(value == "on");  // BUG-117, from the next wait
+  } else if (name == "heat-gpu-wait") {
+    thermal::SetGpuWait(value == "on");  // BUG-117, from the next wait
   } else if (name.rfind("cheat-", 0) == 0) {
     RequestCheat(name, value);  // PLAN 10.14, at the next frame of play
   } else if (name == "dof") {

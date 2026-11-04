@@ -25,6 +25,9 @@
 
 #include <android/data_space.h>
 #include <android/native_window.h>
+#include <linux/futex.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <array>
@@ -138,6 +141,38 @@ extern "C" uint32_t warden_deferred_paint_requests();
 namespace warden {
 bool VideoFourByThree();  // warden_video.cc: the 4:3 test
 }  // namespace warden
+
+// BUG-117: the GPU's progress - a count the command processor bumps each time it writes the
+// ring's read pointer back to the title (command_processor.cc's edit), a futex word for the
+// render thread's fence wait to sleep on with Heat guard's GPU wait on (warden_game.cc's
+// override of the title's wait) instead of spinning a big core. Woken only while someone waits.
+namespace {
+std::atomic<uint32_t> g_gpu_progress{0};
+std::atomic<uint32_t> g_gpu_progress_waiters{0};
+}  // namespace
+
+extern "C" void warden_gpu_progress_note() {
+  g_gpu_progress.fetch_add(1, std::memory_order_release);
+  if (g_gpu_progress_waiters.load(std::memory_order_acquire)) {
+    syscall(SYS_futex, reinterpret_cast<uint32_t*>(&g_gpu_progress), FUTEX_WAKE_PRIVATE,
+            INT32_MAX, nullptr, nullptr, 0);
+  }
+}
+
+extern "C" uint32_t warden_gpu_progress() {
+  return g_gpu_progress.load(std::memory_order_acquire);
+}
+
+// Until the progress count is not `seen` any more, or `timeout_us` passes.
+extern "C" void warden_gpu_progress_wait(uint32_t seen, uint32_t timeout_us) {
+  g_gpu_progress_waiters.fetch_add(1, std::memory_order_acq_rel);
+  if (g_gpu_progress.load(std::memory_order_acquire) == seen) {
+    timespec timeout = {0, long(timeout_us) * 1000};
+    syscall(SYS_futex, reinterpret_cast<uint32_t*>(&g_gpu_progress), FUTEX_WAIT_PRIVATE, seen,
+            &timeout, nullptr, 0);
+  }
+  g_gpu_progress_waiters.fetch_sub(1, std::memory_order_acq_rel);
+}
 
 namespace warden::gpu {
 

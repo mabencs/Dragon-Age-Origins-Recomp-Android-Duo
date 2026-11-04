@@ -417,14 +417,18 @@ try it: `adb shell run-as dev.daorecompandroid.duo kill -9 <pid>` (signaled) or 
 (a native crash with a tombstone) during play, then start the app (run 479). Script
 force stops are not reported.
 
-**The heat guard** (10.2): off by default; `files/thermal-guard` holding `on` (or Options
--> Heat guard, live). The log: `heat guard: on|off`, then `heat guard: hot (GPU 90.4 C,
-thermal level 0) - the frame rate held to 45 (60 chosen)`, `heat guard: cool again ...`,
+**The heat guard** (10.2, BUG-117): Options -> Heat guard opens three options, all off by
+default and live. `files/thermal-guard` holding `on` (Lower the frame rate when hot); the log:
+`heat guard: on|off`, then `heat guard: hot (GPU 75.4 C, big cores 80.1, thermal level 0) - the
+frame rate held to 45 (60 chosen)`, `heat guard: cool again ...`,
 `heat guard: battery saver on ...`, each with `frame rate: 45 on the screen (held there; 60
 chosen)`. To see it work at the temperatures a run reaches, `files/thermal-guard-test`
 holding the hot and cool temperatures (`78 76`; run 476). Android keeps the battery saver
 off while the Thor is powered: `adb shell dumpsys battery unplug`, then `adb shell cmd
 power set-mode 1` (and `0`), then `adb shell dumpsys battery reset` (run 477).
+`files/heat-cpu-rest` and `files/heat-gpu-wait` holding `on` are the other two (the log at the
+first wait: `heat guard: heat-cpu-rest on`). Heat levels out slowly: measure at least 12
+minutes and read the last four (the fan's own curve decides much of it - say what it was).
 
 **An autosave as the game is put away** (9.13): on by default; `files/autosave-on-pause`
 holding `off` turns it off. Put away while exploring, the log says `autosave on pause:
@@ -469,8 +473,8 @@ the headphones'.
 0), the USB-PD input's current times voltage (`/sys/class/power_supply/usb/current_now`,
 `voltage_now`) is the device's whole draw - about 10 W at the camp. Per-thread CPU from
 `/proc/<pid>/task/*/stat` over a window; `simpleperf record -t <tids> -e cpu-cycles` as the app
-(`run-as`; cpu-clock is not offered). `files/hack-spin` restores the spinning Sleep(0),
-`files/guest-trace` the guest trace outside Debugging Mode - the old waits, for an A/B with one
+(`run-as`; cpu-clock is not offered). `files/hack-spin` keeps both waits spinning whatever Heat
+guard says, `files/guest-trace` the guest trace outside Debugging Mode - for an A/B with one
 build. Busy loops started over adb must be detached (`nohup ... > /dev/null 2>&1 < /dev/null &`)
 or `adb shell` never returns - and killed after.
 **4:3** (PLAN 9.22): Options -> Aspect ratio, `files/aspect` holding `4:3` (the log: `video mode:

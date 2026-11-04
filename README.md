@@ -312,7 +312,10 @@ setting's description in the panel matches the table.
 | Button prompts \* | **Xbox** · Nintendo · PlayStation | *Xbox:* A at the bottom, B on the right.<br>*Nintendo:* B at the bottom, A on the right.<br>*PlayStation:* ✕ at the bottom, ○ on the right. |
 | Intro logos \* | **Shown** · Skipped | *Shown:* The EA, BioWare and Edge of Reality logos as the game starts.<br>*Skipped:* Straight to the title screen. |
 | Autosave when put away | **Off** · On | *Off:* Put away, the game holds where it is; if Android closes it in the background, progress since the last save is lost.<br>*On:* Put away while exploring, the game makes its own autosave first (about 2.5 s), then holds. |
-| Heat guard | **Off** · On | *Off:* The frame rate stays as set, however warm the handheld gets.<br>*On:* The frame rate a step lower while the GPU is hot (90 C, or the system's own limit), back after a minute cooler; 30 in battery saver. |
+| Heat guard | **Show** · Hide | A section: ways to run cooler, each at some cost and each on or off by itself. Show opens the three rows below. |
+| &nbsp;&nbsp;&nbsp;Lower the frame rate when hot | **Off** · On | *Off:* The frame rate stays as set, however warm the handheld gets.<br>*On:* The frame rate a step lower while the handheld is hot (the GPU at 75 C or a big core at 88 C, or the system's own limit), back after a minute cooler; 30 in battery saver. Best with the rests below: without them the CPU stays hot even at 30. |
+| &nbsp;&nbsp;&nbsp;Rest the CPU in the game's waits | **Off** · On | *Off:* The game waits for its other threads as on the console, keeping a core busy.<br>*On:* The game's waits rest the core instead: much cooler with the frame rate capped (Frame rate 30 at the King's Camp: the big cores 54 C against 71), but it can add a little stutter. |
+| &nbsp;&nbsp;&nbsp;Rest the CPU while the GPU draws | **Off** · On | *Off:* The game waits for the GPU as on the console, keeping a core busy.<br>*On:* The render thread sleeps until the GPU has moved on: cooler at the same frame rate (uncapped at the King's Camp, the hottest core 85 C against 94). |
 | Headphones | **Stereo** · Surround | *Stereo:* The speakers' mixdown.<br>*Surround:* The game's five speakers placed around you - on headphones only. |
 | Volume boost | **Off** · +6 dB · +12 dB · +18 dB | *Off:* The game's sound as it is mixed.<br>*+6 dB:* Louder; the loudest moments held just under full volume.<br>*+12 dB:* Much louder - for the handheld's speakers; the loudest moments held just under full volume.<br>*+18 dB:* Loudest; the louder moments of combat held down more often. |
 | Second screen \* | **Companion deck** · Off | *Companion deck:* The lower screen shows the party, the quests and more from the game while you play - read-only, by touch.<br>*Off:* The lower screen is left to Android while you play. |
@@ -354,7 +357,7 @@ On the Thor, these are good starting points:
 | **The console's picture, steady** | Frame rate 30 fps; everything else default. |
 | **Smoother motion** | Frame rate 60 fps · FSR 3.1 Performance · Frame generation Lossless 2x, balanced (needs `Lossless.dll`): the game at up to 30 fps and 60 on the screen (the King's Camp: the game at 27). Add Shader math Fast to hold 30 there. |
 | **The sharpest picture** | FSR 3.1 Quality, or Rendering resolution 1920×1080 with FSR 3.1 off. Both cost frame rate: about 23 fps at the King's Camp. |
-| **The longest battery** | Frame rate 30 fps · Dynamic shadows off · Heat guard on. |
+| **The longest battery, the coolest handheld** | Frame rate 30 fps · Dynamic shadows off · every Heat guard option on. |
 | **Louder speakers** | Volume boost +12 dB. |
 
 The **Performance tab/overlay** setting shows the frame rates, frame times and power drawn

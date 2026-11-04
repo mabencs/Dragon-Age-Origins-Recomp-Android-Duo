@@ -76,6 +76,7 @@ VKI_C = "xenia/ui/vulkan/vulkan_instance.cc"
 GCT_H = "xenia/ui/gpu_completion_timeline.h"
 VCP_H = "xenia/gpu/vulkan/vulkan_command_processor.h"
 VCP_C = "xenia/gpu/vulkan/vulkan_command_processor.cc"
+CP_C = "xenia/gpu/command_processor.cc"
 VGS_H = "xenia/gpu/vulkan/vulkan_graphics_system.h"
 VGS_C = "xenia/gpu/vulkan/vulkan_graphics_system.cc"
 PM4_H = "xenia/gpu/pm4_command_processor_implement.h"
@@ -4946,6 +4947,24 @@ EDITS = [
      "      pixel_shader ? pixel_shader->GetUsedTextureMaskAfterTranslation() : 0,\n"
      "      pixel_shader ? pixel_shader->ucode_data_hash() : 0,\n"
      "      vertex_shader->ucode_data_hash(), window_offset_tiles != 0);\n"),
+    (CP_C, "BUG-117: the GPU's progress noted where the read pointer is written back",
+     "    if (read_ptr_writeback_ptr_) {\n"
+     "      xe::store_and_swap<uint32_t>(\n"
+     "          memory_->TranslatePhysical(read_ptr_writeback_ptr_), read_ptr_index_);\n"
+     "    }\n",
+     "    if (read_ptr_writeback_ptr_) {\n"
+     "      xe::store_and_swap<uint32_t>(\n"
+     "          memory_->TranslatePhysical(read_ptr_writeback_ptr_), read_ptr_index_);\n"
+     "    }\n"
+     "    // DAO/Warden (BUG-117): the title's fence wait sleeps on this with Heat guard's\n"
+     "    // GPU wait on (warden_gpu.cc's warden_gpu_progress_note).\n"
+     "    warden_gpu_progress_note();\n"),
+    (CP_C, "BUG-117: the progress note's declaration",
+     "#include \"xenia/gpu/command_processor.h\"\n",
+     "#include \"xenia/gpu/command_processor.h\"\n"
+     "\n"
+     "// DAO/Warden (BUG-117): the GPU's progress, for the title's fence wait (warden_gpu.cc).\n"
+     "extern \"C\" void warden_gpu_progress_note();\n"),
     (VCP_C, "9.21: the corner vignette's draw dropped while the option says off",
      "  if (pixel_shader && pixel_shader->memexport_eM_written() != 0 &&\n"
      "      device_properties.fragmentStoresAndAtomics) {\n",

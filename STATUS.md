@@ -6,11 +6,11 @@ starts by re-deriving context that was already paid for.
 
 | | |
 |---|---|
-| **Last updated** | 2026-11-03 (session 43) |
+| **Last updated** | 2026-11-04 (session 44) |
 | **Version** | **0.1.8-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-03, the tag `v0.1.8-alpha`), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **Published** (2026-11-02): https://github.com/mabencs/Dragon-Age-Origins-Recomp-Android-Duo, the 0.1.0-alpha APK on its Releases page. Next: what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
+| **Next action** | **Unreleased: Options -> Heat guard's section (BUG-117, session 44)** - its CPU-while-the-GPU-draws rest changes the game code's ABI, so the next release asks every player to Build again once (say so in its notes). Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -57,7 +57,7 @@ No game content is committed or packaged.
 | 7 | Glyph system | **COMPLETE** | Xbox, Nintendo and PlayStation prompts (Back -> Settings, from the next start); the PlayStation art the game's own, from its PS3 release; redirects in the UI's atlas descriptions through the title's patch folder and the new override tree (7.3). Gaps: no switching while the game runs (BUG-061); the controller-layout loading screen stays Xbox (runs 346-352) |
 | 8 | Second screen | **Done for its exit criteria (session 37)** | The owner asked: the deck on the lower screen in its own process - 8.1 (both routes work; BUG-078 fixed), 8.2, 8.3 (the state mirror: the UI's token observers, and the deck's own reads of the data model), 8.4 (the game's own typefaces and HUD art, made on the device), 8.5's six tabs (Party, Quests, Map, Tactics, Codex, Items), 8.6 (Perf), 8.7 (killed mid-combat, the game unaffected). Left: the map's pan, pinch and world-map toggle. Session 40: 8.8 (the touch quickbar), 8.9 (the party's faces, read back from the GPU), 8.10 (the Performance tab/overlay option: the Perf tab, or an overlay on the main screen without the second screen) |
 | 9 | Feature port | **Done but for the owner's deferred items** | 60fps, HDR, FSR, filtering. Opened with 3.3b, the frame comparison against DAORecomp's Windows build (`C:\Games\DAORecomp`, started only through `tools/dao_reference.py`, in the background): nothing renders wrongly on the Thor (session 35). Done in session 35: 9.1 (60 fps as a setting), 9.5 (FSR 1, CAS), 9.6 (16x anisotropic), 9.11 (intro logos), 9.12 (the mixdown, the headphone surround), 9.3 (10-bit, Vivid colour), 9.8 (shadows and post-processing switches), 9.7 (FXAA), 9.13 (an autosave when put away), 9.2 (HDR10, the buffers tagged BT.2020 PQ directly; the owner's ask); 9.4 FSR 3.1 done (session 36: Options -> FSR 3.1, Quality, Balanced, Performance with the camera's motion vectors - 8.35, 7.55 and 6.78 ms, the camp 23.4, 25.9 and 28.8 fps; BUG-067, FSR without depth or motion before); 9.14 frame generation added (FSR 3.1's, lsfg-vk's; the frame rate a target on the screen) - Lossless 2x in play (session 37: about 60 frames a second on the panel at the camp, the title 31.8), FSR 3.1 2x working (the game at 25.8 with FSR 3.1 Performance, 45-62 on the panel); 9.10 dropped (Q2); 3.8's Adreno performance work comes back here too; 9.13 investigates an autosave as the game is put away (the owner, 2026-10-27) Session 40: 9.16 Rendering resolution (960x540, 1280x720, 1360x768; 1080p does not fit the game's EDRAM use) 9.17 field of view, 9.18 motion blur, 9.19 depth of field in conversations and 9.20 photo mode done (upstream's, ported). 9.14 closed by the owner (2026-11-02). Deferred by the owner: 9.15 (LS1) and 9.9; 3.8's Adreno work. |
-| 10 | Polish | **COMPLETE** | 10.1 done (session 35, runs 394-396): the options panel - Select + Start during play, every option over the held game, most of them live. 10.2 done (session 38, runs 475-477): no throttling at the heaviest settings; Options -> Heat guard, off by default. 10.4 closed (nothing to build before play beyond 10.3). 10.7 done (run 479): how the last session ended, on the launch screen, with reports in files/exits. 10.3 done (session 34). 10.5 (a 4-hour soak) and 10.6 (battery life) dropped by the owner (2026-10-31). 10.9 done (runs 494-518): GPU headroom - the frame generation's balanced mode, Shader math (Fast an option), FSR 3.1's Lanczos lookup table, the fetch constants decoded on the CPU (the camp 27.2 -> 28 fps), the vertex fetches' binding and endianness known per draw (28 -> 30, the game's cap). 10.17 and 10.18 done (session 40, runs 550-551): the on-screen controller as an option, and the launcher and options panel by touch. 10.12-10.16 done (session 40, runs 569-573): PC mods and their converter, the cheats, the save restore page, language. 10.19 done (run 574): PC add-ins installed as downloadable content, .7z and .rar imports. 9.14 closed by the owner (2026-11-02); BUG-091 and BUG-092 (a conversation's stutter) fixed. 10.20 done (session 41): a manual save named on the keyboard. |
+| 10 | Polish | **COMPLETE** | 10.1 done (session 35, runs 394-396): the options panel - Select + Start during play, every option over the held game, most of them live. 10.2 done (session 38, runs 475-477): no throttling at the heaviest settings; Options -> Heat guard, off by default. 10.4 closed (nothing to build before play beyond 10.3). 10.7 done (run 479): how the last session ended, on the launch screen, with reports in files/exits. 10.3 done (session 34). 10.5 (a 4-hour soak) and 10.6 (battery life) dropped by the owner (2026-10-31). 10.9 done (runs 494-518): GPU headroom - the frame generation's balanced mode, Shader math (Fast an option), FSR 3.1's Lanczos lookup table, the fetch constants decoded on the CPU (the camp 27.2 -> 28 fps), the vertex fetches' binding and endianness known per draw (28 -> 30, the game's cap). 10.17 and 10.18 done (session 40, runs 550-551): the on-screen controller as an option, and the launcher and options panel by touch. 10.12-10.16 done (session 40, runs 569-573): PC mods and their converter, the cheats, the save restore page, language. 10.19 done (run 574): PC add-ins installed as downloadable content, .7z and .rar imports. 9.14 closed by the owner (2026-11-02); BUG-091 and BUG-092 (a conversation's stutter) fixed. 10.20 done (session 41): a manual save named on the keyboard. Session 44: Options -> Heat guard a section - the frame-rate guard at 75/88 C and two rests of the CPU (BUG-117). |
 | 11 | Release | **COMPLETE** | 11.1 Debugging Mode (run 584), 11.2 saves out and in (run 585), 11.5 About and licences (run 586), 11.3 the release build - GPL-3.0-or-later, its own key, the APK proven - and 11.4 the first run on a clean install (session 41). 11.6 (session 41): the launcher's test launch removed. Version 0.1.0-alpha, "Open Alpha", the docs brought up to date for a public repository. |
 | 13 | Updates from the launcher | **COMPLETE** | The check at each launcher start, Download & install, the manual flag (`docs/DECISIONS.md` D15) |
 | 12 | A published APK | **COMPLETE** | The game's code made on the device from the player's own discs (the owner, 2026-11-02). 12.1: LLVM 19.1.7 for Android (clang and lld, one 89.8 MB program). 12.2: the game's code is libdaogame.so, out of the APK, loaded at boot (run 594). 12.4: XenonRecomp for Android, its output identical to the computer's. 12.5: the Thor makes it itself in 7 min 30 s (runs 595-596). 12.3: disc 2's Title Update 6 alone is enough (runs 597-598, BUG-103 fixed). 12.6: the release APK (75.6 MB) passes `tools/release.py` - no game code, the device toolchain in it. 12.7: that APK on the Thor beside the owner's, the two disc images from Download, the code made on the device in 7 min 43 s, the game to its main menu (run 599). 12.8: the launcher's Build row - the making starts only when the player chooses it (run 600) |
@@ -1867,6 +1867,31 @@ Then continue from **Next action** at the top of this file.
 
 Newest first. One short entry per session: what changed, what's next.
 
+### 2026-11-04 (session 44) - Heat guard a section: two rests and the frame-rate guard; BUG-117
+
+- **BUG-117, the owner's asks:** the Sleep(0) nap into Heat guard, noted as able to add
+  stutter; Frame rate 30 alone did not cool much, so keep looking, and what cools at a cost goes
+  into Heat guard; then Heat guard a collapsible section with the options inside it. The fan at a
+  fixed 50% over 45 C (the owner's, for the tests); heat levels out slowly, so 12-minute runs,
+  the last four read.
+- **Options -> Heat guard** opens three options, each off by default and live
+  (`Option.asSection()`/`inGroup()`, `files/heat` the panel's open/closed): Lower the frame rate
+  when hot (`thermal-guard`, now at the GPU 75 C or a big core 88 C - 90 C was never reached
+  with the fan), Rest the CPU in the game's waits (`heat-cpu-rest`, the nap), Rest the CPU while
+  the GPU draws (`heat-gpu-wait`: the render thread's fence wait asleep on the command
+  processor's read-pointer write-back, `warden_gpu_progress_*`). **The last is an override: the
+  game code's ABI is 74aa2ee2adfcb1e2, so players Build again once after updating.**
+- **Measured** (runs 718-730, docs/BUGS.md BUG-117's table): no frame rate lost (120 with frame
+  generation off: 40.3, 40.5, 40.5; the 1% low 25.2, 31.8, 34.9). The hottest big core: Frame
+  rate 30 82.4 -> 57.7 C with the CPU rest; 120 with Lossless 2x 94.5 -> 78.4 with both; 120
+  without frame generation 94.9 -> 85.4. The GPU rest added no stutter in the Wilds (runs
+  724-727: no frame over 50 ms off or on). Run 731: the frame-rate guard alone, uncapped -
+  120 -> 60 -> 45 -> 30 in 90 s on a big core over 88 C, but at 30 the cores stayed at 84 C
+  (the waits spinning): best with the rests, its text says.
+- BUG-118: `tools/push_gamecode.py` never wrote the manifest (the JSON's quotes lost in adb's shell): the
+  launcher asked to build again after a push. It now pushes it as a file, even when the library
+  is already there.
+
 ### 2026-11-03 (session 43) - two apps on the Thor; the Map tab; release notes; custom drivers tried and dropped; BUG-112, BUG-113
 
 - The published 0.1.2-alpha is installed on the Thor beside the debug app: the owner plays on
@@ -1953,10 +1978,9 @@ Newest first. One short entry per session: what changed, what's next.
   Fixed in the runtime: Sleep(0) streaks nap, the trace only in Debugging Mode - 3.0-3.1 cores to
   2.5 at the same frame rate. But the Thor's power and temperatures did not move (about 10 W, big
   cores 94.7 C): the game keeps the clusters busy (two busy loops added 0.2 W) and the GPU at its
-  ceiling, as Dusklight does beside it (9.41 W against 9.16; Dusklight's GPU sensors 5 C cooler).
-  Not the firmware holding the clocks, as first written (the owner corrected it). The fence wait asleep was built and measured (the render
-  thread 98% to 25%) but left out: it changes the game code's ABI for no gain on the Thor.
-  Measured with the USB-PD input's power (runs 697-703).
+  ceiling, as another demanding game does beside it (9.41 W against 9.16). Not the firmware
+  holding the clocks, as first written (the owner corrected it). Measured with the USB-PD input's
+  power (runs 697-703); session 44 took it further (Options -> Heat guard's rests).
 
 ### 2026-11-02 (session 42, later) - the launcher's updates; BUG-110, BUG-111
 

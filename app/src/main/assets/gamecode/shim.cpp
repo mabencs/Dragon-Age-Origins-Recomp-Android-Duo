@@ -8,7 +8,7 @@
 #include <cstdint>
 
 // The runtime this game code was made for; the runtime loads only its own.
-extern "C" __attribute__((visibility("default"))) const char warden_gamecode_abi[] = "1961314d8a1bb6ae";
+extern "C" __attribute__((visibility("default"))) const char warden_gamecode_abi[] = "74aa2ee2adfcb1e2";
 
 // The image's layout as it was translated - the title update decides its size, and
 // the indirect-call table sits right after it.
@@ -54,6 +54,7 @@ extern "C" __attribute__((visibility("default"))) const char* const warden_gamec
     "tu6_sub_82AF22A8",
     "tu6_sub_82D8D198",
     "tu6_sub_82D8D340",
+    "tu6_sub_82D8E218",
     "tu6_sub_82D8E8E0",
     "tu6_sub_82D8F018",
     "tu6_sub_82D8F170",
@@ -113,6 +114,7 @@ extern "C" PPC_FUNC(warden_override_tu6_sub_82A8FF68);
 extern "C" PPC_FUNC(warden_override_tu6_sub_82AF22A8);
 extern "C" PPC_FUNC(warden_override_tu6_sub_82D8D198);
 extern "C" PPC_FUNC(warden_override_tu6_sub_82D8D340);
+extern "C" PPC_FUNC(warden_override_tu6_sub_82D8E218);
 extern "C" PPC_FUNC(warden_override_tu6_sub_82D8E8E0);
 extern "C" PPC_FUNC(warden_override_tu6_sub_82D8F018);
 extern "C" PPC_FUNC(warden_override_tu6_sub_82D8F170);
@@ -170,6 +172,7 @@ PPC_FUNC(tu6_sub_82A8FF68) { warden_override_tu6_sub_82A8FF68(ctx, base); }
 PPC_FUNC(tu6_sub_82AF22A8) { warden_override_tu6_sub_82AF22A8(ctx, base); }
 PPC_FUNC(tu6_sub_82D8D198) { warden_override_tu6_sub_82D8D198(ctx, base); }
 PPC_FUNC(tu6_sub_82D8D340) { warden_override_tu6_sub_82D8D340(ctx, base); }
+PPC_FUNC(tu6_sub_82D8E218) { warden_override_tu6_sub_82D8E218(ctx, base); }
 PPC_FUNC(tu6_sub_82D8E8E0) { warden_override_tu6_sub_82D8E8E0(ctx, base); }
 PPC_FUNC(tu6_sub_82D8F018) { warden_override_tu6_sub_82D8F018(ctx, base); }
 PPC_FUNC(tu6_sub_82D8F170) { warden_override_tu6_sub_82D8F170(ctx, base); }

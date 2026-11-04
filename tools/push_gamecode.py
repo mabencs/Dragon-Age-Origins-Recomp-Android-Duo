@@ -16,9 +16,9 @@ library holds the game's code translated - it goes to the owner's own device onl
 import argparse
 import hashlib
 import json
-import shlex
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,26 +54,39 @@ def main():
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     there = adb("shell", "run-as %s sh -c 'sha256sum files/gamecode/libdaogame.so 2>/dev/null'"
                 % package, capture=True).split()
-    if there and there[0] == digest:
+    same = bool(there) and there[0] == digest
+    if same:
+        # The manifest still written: the library may have come another way, its
+        # manifest left as the last made (the launcher then asks to build again).
         print("the device has this libdaogame.so already (%s)" % digest[:12])
-        return 0
-    staging = "/sdcard/warden-libdaogame.so"
-    adb("push", path, staging)
-    adb("shell", "run-as %s sh -c 'mkdir -p files/gamecode && chmod 700 files/gamecode && "
-                 "cp %s files/gamecode/libdaogame.so.part && "
-                 "chmod 0444 files/gamecode/libdaogame.so.part && "
-                 "mv -f files/gamecode/libdaogame.so.part files/gamecode/libdaogame.so'"
-        % (package, staging))
-    adb("shell", "rm -f " + staging)
+    else:
+        staging = "/sdcard/warden-libdaogame.so"
+        adb("push", path, staging)
+        adb("shell", "run-as %s sh -c 'mkdir -p files/gamecode && chmod 700 files/gamecode && "
+                     "cp %s files/gamecode/libdaogame.so.part && "
+                     "chmod 0444 files/gamecode/libdaogame.so.part && "
+                     "mv -f files/gamecode/libdaogame.so.part files/gamecode/libdaogame.so'"
+            % (package, staging))
+        adb("shell", "rm -f " + staging)
     # What it was made from, as the app writes it (GameCode.java): without it the app
     # would make the game's code again itself (PLAN 12.5). The computer's is TU7's.
     abi = json.loads((ROOT / "app" / "src" / "main" / "assets" / "gamecode" /
                       "recipe.json").read_text(encoding="utf-8"))["abi"]
     manifest = json.dumps({"abi": abi, "tu": 7, "made": "computer"})
-    adb("shell", "run-as %s sh -c 'echo %s > files/gamecode/manifest.json'"
-        % (package, shlex.quote(manifest)))
-    print("pushed %s (%.1f MB, %s) to %s files/gamecode/" % (
-        path.relative_to(ROOT), path.stat().st_size / 1e6, digest[:12], package))
+    # As a file: the JSON's quotes did not survive adb's shell, run-as's and sh -c's
+    # (the manifest was never written - an echo to the screen).
+    with tempfile.TemporaryDirectory() as temp:
+        local = Path(temp) / "manifest.json"
+        local.write_text(manifest + "\n", encoding="utf-8")
+        staging = "/sdcard/warden-manifest.json"
+        adb("push", local, staging)
+        adb("shell", "run-as %s sh -c 'cp %s files/gamecode/manifest.json'"
+            % (package, staging))
+        adb("shell", "rm -f " + staging)
+    if not same:
+        print("pushed %s (%.1f MB, %s) to %s files/gamecode/" % (
+            path.relative_to(ROOT), path.stat().st_size / 1e6, digest[:12], package))
+    print("manifest: ABI %s" % abi)
     return 0
 
 

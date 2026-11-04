@@ -4,11 +4,28 @@
 
 ### Changed
 
-- **Less CPU work while the game waits.** The game's main thread no longer spins a processor core
-  while it waits for its render thread, and a diagnostic record of the game's functions is now kept
-  only in Debugging Mode. Together about a fifth less CPU work, at the same frame rate. On the AYN
-  Thor this barely changes the temperature: the game keeps the GPU at full speed every frame, as
-  other demanding games do, and that is where the heat comes from.
+- **Heat guard is now a section of its own in Settings**, with three ways to run cooler, each off
+  by default and each turned on or off by itself:
+  - **Lower the frame rate when hot** - the old Heat guard. It now steps in at temperatures a
+    Thor with its fan running actually reaches (the GPU at 75 C or a big CPU core at 88 C).
+    Before, it waited for 90 C on the GPU and never acted. Use it with the two rests below:
+    without them the CPU stays hot even at a lower frame rate.
+  - **Rest the CPU in the game's waits** - the game's main thread rests instead of spinning a
+    processor core while it waits for its other threads. The biggest help with a frame-rate cap:
+    at Frame rate 30 the hottest CPU core ran at 58 C instead of 82 C. It can add a little
+    stutter.
+  - **Rest the CPU while the GPU draws** - the game's render thread sleeps instead of spinning
+    while it waits for the GPU. Uncapped, with both rests on, the hottest CPU core ran 9-16 C
+    cooler, at the same frame rate.
+- **Both rests together cost no frame rate** in our tests at the King's Camp, and the slowest
+  frames got a little faster.
+- **A diagnostic record of the game's functions is now kept only in Debugging Mode**, for less
+  CPU work.
+
+### Installing
+
+- **After updating, choose Build again once** in the launcher (about eight minutes). The new
+  rest for the render thread needs the game's code made again. Your saves and settings stay.
 
 ## 0.1.8-alpha - "Open Alpha"
 

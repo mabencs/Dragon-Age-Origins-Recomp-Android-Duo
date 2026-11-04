@@ -2786,6 +2786,15 @@ behind the owner's (CLAUDE.md).
       on, 30; off, 60 again (it cannot come on while the Thor is powered - the run reported
       the charger unplugged, `dumpsys battery unplug`, and reset it). Resolution scaling is
       not part of it: FSR 3.1's mode is taken at the start.
+      **Session 44 (BUG-117, the owner, 2026-11-04): Heat guard a section.** Its row opens
+      and closes three options, each Off by default and live (`Option.asSection()`,
+      `inGroup("heat")`; `files/heat` holds `open` or `closed`, the panel's alone):
+      **Lower the frame rate when hot** (`files/thermal-guard`, the above, now stepping at
+      the GPU 75 C or a big core 88 C and lifting at 62 / 72 - 90 C was never reached with
+      the fan running), **Rest the CPU in the game's waits** (`files/heat-cpu-rest`: the
+      Sleep(0) nap, which can add stutter) and **Rest the CPU while the GPU draws**
+      (`files/heat-gpu-wait`: the render thread's fence wait asleep - an override, so the
+      game code's ABI changes and players build again).
 - [x] 10.3 Vulkan pipeline cache pre-warm to kill first-run shader stutter. **Session
       34:** pipelines are created when first drawn with (upstream's background
       compilation drew a placeholder pixel shader in one-off renders - BUG-049, BUG-052),

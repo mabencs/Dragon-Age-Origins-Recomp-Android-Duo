@@ -51,6 +51,7 @@
 
 #include "ppc_recomp_shared.h"
 #include "warden_game_library.h"
+#include "warden_thermal.h"
 #include "warden_autosave.h"
 #include "warden_debug_mode.h"
 #include "warden_deck.h"
@@ -1313,6 +1314,32 @@ WARDEN_OVERRIDE(tu6_sub_826955E8) {
     ctx.r3.u64 = 1;
   } else if (ctx.r3.s32 == 2) {
     PPC_STORE_U32(kSceneTileRects + 12, 512);
+  }
+}
+
+// BUG-117 (issue #2): the title's Direct3D waits for the GPU by spinning. sub_82DA16F0, its
+// BlockOnFence, loops until the ring's read pointer (written back to the title by the command
+// processor) passes the fence, calling sub_82D8E218 each time round: db16cyc delays at low
+// thread priority (cctpl), which on the Xenon gave the core to its sibling hardware thread,
+// and a check against a 5000-tick limit; it returns 1 to go on waiting, 0 to stop.
+// Translated, the delays are nothing: a big core flat out whenever the game waits on the GPU
+// (run 721, uncapped: DragonAge::Render 98.5% of a core). With Heat guard's Rest the CPU
+// while the GPU draws (files/heat-gpu-wait), a pass that says go on is followed
+// by a sleep until the command processor next writes the
+// read pointer back (warden_gpu.cc), at most 2 ms; the loop then checks the fence again.
+// Off, the title's own loop, as ever.
+namespace warden {
+bool SpinWaits();  // warden_threads.cc: files/hack-spin, BUG-117's test switch
+}  // namespace warden
+extern "C" uint32_t warden_gpu_progress();
+extern "C" void warden_gpu_progress_wait(uint32_t seen, uint32_t timeout_us);
+WARDEN_GAME_FUNC(__imp__tu6_sub_82D8E218);
+
+WARDEN_OVERRIDE(tu6_sub_82D8E218) {
+  const uint32_t seen = warden_gpu_progress();
+  __imp__tu6_sub_82D8E218(ctx, base);
+  if (ctx.r3.u32 == 1 && warden::thermal::GpuWait() && !warden::SpinWaits()) {
+    warden_gpu_progress_wait(seen, 2000);
   }
 }
 

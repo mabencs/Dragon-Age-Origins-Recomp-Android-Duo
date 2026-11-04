@@ -17,12 +17,19 @@
 //
 // The heat guard - an option, off by default (the owner, 2026-10-31: nothing changes the
 // frame rate on its own unless asked). On, it holds the rate on the screen a step lower
-// (warden::SetFrameRateCap: 120 -> 60 -> 45 -> 30) when the kernel caps the GPU or the GPU
-// reaches 90 C, a step at most every 30 s, and lifts it a step at a time after a minute at
-// 80 C or less with no cap. With Android's battery saver on, it holds 30. The player's
-// own choice stays as it is; the guard's limit lies over it. files/thermal-guard-test
-// holding two numbers ("75 74") sets the hot and cool temperatures instead - a test switch,
-// to see the guard work at the temperatures a run reaches.
+// (warden::SetFrameRateCap: 120 -> 60 -> 45 -> 30) when the kernel caps the GPU, the GPU
+// reaches 75 C or the hottest big core 88 C, a step at most every 30 s, and lifts it a step
+// at a time after a minute with no cap, the GPU at 62 C or less and the big cores at 72 or
+// less. With Android's battery saver on, it holds 30. The player's own choice stays as it
+// is; the guard's limit lies over it. files/thermal-guard-test holding two numbers ("75
+// 74") sets the GPU's hot and cool temperatures instead - a test switch, to see the guard
+// work at the temperatures a run reaches.
+//
+// BUG-117 (the owner, 2026-11-04): it stepped only at 90 C on the GPU, which a Thor with its
+// fan running never reaches (the camp uncapped: the GPU 78 C, the big cores 84 on average and
+// 94 at the hottest - run 721), so it never acted. A lower frame rate cools the Thor only
+// with the game's waits resting the processor (the guard's other half, warden_threads.cc and
+// warden_game.cc): at 30 the big cores 71 C without, 54 with (runs 718-720).
 
 #include "warden_thermal.h"
 
@@ -202,8 +209,10 @@ int g_ticks_since_step = kTicksBetweenSteps;
 int g_ticks_cool = 0;
 
 struct Temperatures {
-  double hot = 90.0;
-  double cool = 80.0;
+  double hot = 75.0;   // the hottest GPU sensor
+  double cool = 62.0;
+  double big_hot = 88.0;   // the hottest big core
+  double big_cool = 72.0;
 };
 
 const Temperatures& TheTemperatures() {
@@ -295,8 +304,8 @@ void Guard(const Reading& r) {
   const Temperatures& t = TheTemperatures();
   ++g_ticks_since_step;
   const bool capped = r.level > 0;
-  const bool hot = capped || r.gpu >= t.hot;
-  const bool cool = r.level == 0 && r.gpu >= 0 && r.gpu <= t.cool;
+  const bool hot = capped || r.gpu >= t.hot || r.big >= t.big_hot;
+  const bool cool = r.level == 0 && r.gpu >= 0 && r.gpu <= t.cool && r.big <= t.big_cool;
   g_ticks_cool = cool ? g_ticks_cool + 1 : 0;
   const int chosen = ChosenFrameRate();
   const int showing = g_heat_cap && g_heat_cap < chosen ? g_heat_cap : chosen;
@@ -304,14 +313,15 @@ void Guard(const Reading& r) {
   if (hot && showing > 30 && g_ticks_since_step >= kTicksBetweenSteps) {
     g_heat_cap = StepBelow(showing);
     g_ticks_since_step = 0;
-    std::snprintf(why, sizeof(why), "hot (GPU %.1f C, thermal level %ld)", r.gpu, r.level);
+    std::snprintf(why, sizeof(why), "hot (GPU %.1f C, big cores %.1f, thermal level %ld)",
+                  r.gpu, r.big, r.level);
     Apply(why);
   } else if (g_heat_cap && g_ticks_cool >= kTicksCoolBeforeLift &&
              g_ticks_since_step >= kTicksBetweenSteps) {
     g_heat_cap = StepAbove(g_heat_cap, chosen);
     g_ticks_since_step = 0;
     g_ticks_cool = 0;
-    std::snprintf(why, sizeof(why), "cool again (GPU %.1f C)", r.gpu);
+    std::snprintf(why, sizeof(why), "cool again (GPU %.1f C, big cores %.1f)", r.gpu, r.big);
     Apply(why);
   }
 }
@@ -323,6 +333,34 @@ std::string Tick() {
   Guard(reading);
   return Summary(reading);
 }
+
+namespace {
+std::atomic<int> g_cpu_rest{-1};
+std::atomic<int> g_gpu_wait{-1};
+
+bool Switch(std::atomic<int>& value, const char* file) {
+  int seen = value.load(std::memory_order_relaxed);
+  if (seen < 0) {
+    bool on = false;
+    if (const char* dir = std::getenv("WARDEN_FILES_DIR")) {
+      if (FILE* f = std::fopen((std::string(dir) + "/" + file).c_str(), "r")) {
+        char text[16] = {};
+        on = std::fscanf(f, "%15s", text) == 1 && std::strcmp(text, "on") == 0;
+        std::fclose(f);
+      }
+    }
+    seen = on ? 1 : 0;
+    value.store(seen, std::memory_order_relaxed);
+    XELOGI("heat guard: {} {}", file, on ? "on" : "off");
+  }
+  return seen == 1;
+}
+}  // namespace
+
+bool CpuRest() { return Switch(g_cpu_rest, "heat-cpu-rest"); }
+bool GpuWait() { return Switch(g_gpu_wait, "heat-gpu-wait"); }
+void SetCpuRest(bool on) { g_cpu_rest.store(on ? 1 : 0, std::memory_order_relaxed); }
+void SetGpuWait(bool on) { g_gpu_wait.store(on ? 1 : 0, std::memory_order_relaxed); }
 
 void SetGuard(bool on) {
   std::lock_guard<std::mutex> lock(g_guard_mutex);

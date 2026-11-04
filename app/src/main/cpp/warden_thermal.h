@@ -18,4 +18,12 @@ void SetGuard(bool on);
 // Android's battery saver, from GameActivity (it matters only with the guard on).
 void SetPowerSave(bool on);
 
+// BUG-117, Heat guard's other options (files/heat-cpu-rest, files/heat-gpu-wait: "on"),
+// for any thread without a lock: the game's Sleep(0) spins rest (warden_threads.cc), the
+// render thread's GPU fence wait sleeps (warden_game.cc). Read at the start, set live.
+bool CpuRest();
+bool GpuWait();
+void SetCpuRest(bool on);
+void SetGpuWait(bool on);
+
 }  // namespace warden::thermal

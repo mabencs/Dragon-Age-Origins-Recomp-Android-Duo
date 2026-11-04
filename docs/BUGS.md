@@ -83,7 +83,8 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
-| [BUG-117](#bug-117) | our runtime / the title's waits | medium | **PARTLY FIXED** | High temperatures (issue #2): the title's waits spin - the main thread's Sleep(0) hand-off and the render thread's GPU fence wait - and the guest trace costs every function's entry. The CPU work cut by a fifth; the power and temperatures are the GPU's, at its ceiling as in other GPU-bound games, unchanged |
+| [BUG-118](#bug-118) | our tools (`push_gamecode.py`) | low | **FIXED** | A pushed game code's manifest was never written: the launcher asked for Build again after every push |
+| [BUG-117](#bug-117) | our runtime / the title's waits | medium | **FIXED** | High temperatures (issue #2): the title's waits spin - the main thread's Sleep(0) hand-off and the render thread's GPU fence wait - and the guest trace costs every function's entry. Options -> Heat guard's rests sleep instead, no frame rate lost: the hottest big core 9.5-25 C cooler (the guest trace only in Debugging Mode) |
 | [BUG-116](#bug-116) | the device's firmware (AYN Thor) / our app | high | **FIXED** | The game's volume did not follow Android's: AYN gives apps on the second screen their own volume, and the deck (an activity there) put the game there. Held volume-up past the top raised it further; with the deck off, the media volume was applied twice. The deck is a window of the game's now |
 | [BUG-115](#bug-115) | our app (the deck's Map tab, PLAN 8.4) | medium | **FIXED** | The deck's map was upside down against the game's map screen in every area whose North is 1 or 3 (the King's Camp): it was turned anticlockwise, the game turns clockwise |
 | [BUG-114](#bug-114) | our app (the update, PLAN 13.1) | high | **FIXED** (0.1.5-alpha) | The launcher's update failed after Android's Install: the launcher, back in front, abandoned the session Android was installing - "the install was cancelled". In 0.1.2 to 0.1.4; mostly fails, sometimes wins |
@@ -2941,10 +2942,26 @@ queries, 37.6 and 2,095 with them (the query boxes are draws of their own; runs 
 
 ---
 
+## BUG-118
+**A pushed game code's manifest never written**
+Our tools (`tools/push_gamecode.py`) · severity low (development only) · **FIXED** session 44
+
+**What it looks like:** after `python tools/push_gamecode.py` the launcher says "Ready to build"
+and Build again, though the library is the computer's own for this APK.
+
+**Cause:** the manifest (`files/gamecode/manifest.json`, the ABI the launcher compares) was written
+with `run-as <pkg> sh -c 'echo <json> > ...'`, the JSON quoted by `shlex.quote` inside the single
+quotes: adb's shell, run-as and sh -c split it, so the echo printed to the screen and the file kept
+the last device build's ABI. And when the library was already there the script returned before
+the manifest at all.
+
+**Fixed:** the manifest is written to a temporary file and pushed like the library, whether or not
+the library had to be (the script prints `manifest: ABI <hash>`).
+
 ## BUG-117
 **High temperatures during play (issue #2)**
 Our runtime (`warden_threads.cc`, `warden_trace.cc`) and the title's own waits · severity medium ·
-**PARTLY FIXED** session 43
+**FIXED** sessions 43-44 (the owner's choices)
 
 **What it looks like** (issue #2, 2026-11-03: 65-70 C; the owner: about 80 C): the Thor hot in play.
 The game's own reading at the King's Camp (DAO Debug: 120 fps, FSR 3.1 off, Lossless 2x, 1360x768,
@@ -2965,41 +2982,49 @@ FXAA): big cores 94-95 C, the GPU 87-90 C at its 680 MHz ceiling, the board 64-7
   (tlsdesc_resolver_dynamic) - the library is opened at run time, so each entry's ring is found
   the slow way.
 
-**Fixed** (the runtime only - the game code's ABI unchanged, no player rebuild):
-- A Sleep(0) or NtYieldExecution within 200 us of the last, from the eighth in a row, naps 30 us
-  instead of yielding (`YieldOrNap`); a lone one between pieces of work still yields.
+**Fixed - Options -> Heat guard** (session 44, the owner, 2026-11-04: each way of running cooler
+the player's own, at its cost): a section of three options, all off by default and live.
+- **Rest the CPU in the game's waits** (`files/heat-cpu-rest`): a Sleep(0) or NtYieldExecution
+  within 200 us of the last, from the eighth in a row, naps 30 us instead of yielding
+  (`YieldOrNap`); a lone one between pieces of work still yields. The answer is seen up to a nap
+  later: 41.8 game frames over 50 ms a Korcari Wilds run against 37.4 (runs 704-717), so it says
+  it can add a little stutter.
+- **Rest the CPU while the GPU draws** (`files/heat-gpu-wait`): an override of sub_82D8E218 that,
+  when the pass says go on waiting, sleeps on a futex the command processor bumps where it writes
+  the read pointer back (command_processor.cc, after `store_and_swap` of read_ptr_writeback_ptr_),
+  at most 2 ms; the loop then checks the fence again. An override, so the game code's ABI changes
+  (74aa2ee2adfcb1e2 against 1961314d8a1bb6ae): every player's Build again once, about eight
+  minutes. No stutter measured: runs 724-727 in the Wilds, off and on in turn, no game frame over
+  50 ms in any.
+- **Lower the frame rate when hot** (`files/thermal-guard`, PLAN 10.2's guard) now steps at the GPU
+  75 C or a big core 88 C, lifting at 62 / 72: at 90 C on the GPU only, it never acted with the
+  fan running. Run 731 (120, frame generation off, the rests off): 120 -> 60 -> 45 -> 30 in 90 s,
+  each on a big core over 88 C - but held at 30 the big cores stayed at 84.3 C (the hottest 94.6),
+  the spinning waits filling the idle time, so it never lifted. Its text says so: best with the
+  rests.
 - The guest trace is recorded only in Debugging Mode (`WARDEN_DEBUG_MODE`) or with
-  `files/guest-trace`: otherwise the entry returns before the ring. Its readers are the fault log
-  and the thread reports only.
+  `files/guest-trace` (always, not an option): otherwise the entry returns before the ring. Its
+  readers are the fault log and the thread reports only.
 
-Measured at the camp, 180 s after 60 s each, the device's power from its USB-PD input (the battery
-full, reporting 0 - the input is the whole draw): the old waits (`files/hack-spin`,
-`files/guest-trace`) runs 700 and 702: 3.0-3.1 cores, 10.18 and 9.84 W, 57.4 and 56.7 frames shown
-a second, big cores 94.7 C; run 703 with the fixes: **2.5 cores** (the main thread 43%), 9.77 W,
-57.8 frames, big cores 94.7 C.
+**Measured** at the King's Camp, 12 minutes each and the last four read (heat levels out slowly),
+the owner's fan at a fixed 50% over 45 C, DAO Debug at 1360x768, FXAA, FSR 3.1 off. The device's
+power from its USB-PD input with the battery full:
 
-**Why the temperatures do not move on the Thor.** The clusters run high (2016 / 2707-2803 MHz, the
-prime core 1.8-3.2 GHz; the governor walt, not touched) because the game keeps them busy - the mid
-cores share one clock, and the game's other threads hold it up - so two cores fewer spinning saved
-little: two busy loops pinned to big cores beside the game added 0.2 W (9.90, 10.11, 9.95 W - the
-control). (An earlier version of this entry said the firmware's profile held the clocks high: wrong,
-the owner pointed out, 2026-11-04 - Dusklight runs lower and cooler.) Beside Dusklight, minutes
-apart, the same sensors: Dusklight GPU 680 MHz 99% busy, 9.41 W, clocks 2016 / 2784 / 2022 MHz,
-big cores 86.6 C (the hottest 92.0), the GPU 81.1 C, the board 68.0 C; the game at the camp GPU 680
-MHz 99%, 9.16 W, 2016 / 2714 / 2468 MHz, big cores 87.9 (94.8), the GPU 86.5, the board 70.5. Both
-keep the GPU at its ceiling at about the same power; Dragon Age's heat sits more on the GPU. The
-GPU is the limit every frame, so GPU time saved becomes frames, not coolness: lowering the
-temperature means giving the GPU idle time - a frame rate cap below what it reaches, or the
-settings' trades (Lossless 2x's balanced mode about 6 ms of the GPU a generated frame against
-quality's 14, a lower resolution, FSR 3.1) - not something free.
+| Runs | Settings | Game fps | 1% low | Big cores (hottest) | GPU | Board | Power | CPU |
+|---|---|---|---|---|---|---|---|---|
+| 720 / 719 | Frame rate 30, Lossless 2x: nothing / CPU rest | 15.1 / 15.1 | 13.6 / 14.2 | 71.1 (82.4) / 53.8 (57.7) | 61.3 / 50.3 | 50.1 / 42.9 | (charging) | the main thread 105% / 23% |
+| 721 / 722 / 723 | 120, Lossless 2x: nothing / CPU rest / both | 29.5 / 29.7 / 30.0 | 23.8 / 26.5 / 26.7 | 84.2 (94.5) / 83.6 (93.9) / 73.0 (78.4) | 78.3 / 78.1 / 70.2 | 60.7 / 60.7 / 55.4 | (charging) / 9.77 / 9.07 W | the render thread 98.5% / - / 24.9% |
+| 728 / 729 / 730 | 120, frame generation off: nothing / CPU rest / both | 40.3 / 40.5 / 40.5 | 25.2 / 31.8 / 34.9 | 85.8 (94.9) / 84.3 (94.5) / 80.5 (85.4) | 80.5 / 79.9 / 76.0 | 62.4 / 62.2 / 59.7 | 10.42 / 10.61 / 10.00 W | 3.05 / 2.63 / 1.87 cores |
 
-**Not shipped: the render thread's fence wait asleep.** Built and measured (run 701, with the above):
-an override of sub_82D8E218 that, when the pass says go on waiting, sleeps on a futex the command
-processor bumps where it writes the read pointer back (command_processor.cc, after
-`store_and_swap` of read_ptr_writeback_ptr_), at most 2 ms - the render thread 98% to 25%, the
-process 1.6 cores, frames 56.8, but 10.12 W. An override changes the game code's ABI (74aa2ee2adfcb1e2
-against 1961314d8a1bb6ae): every player's Build again, about eight minutes, for no measured gain on
-the Thor; kept out until a device shows one.
+So neither rest costs frame rate - the 1% lows rise with them - and together they take the hottest
+big core down 9.5 C uncapped, 16 C with Lossless 2x and 25 C at Frame rate 30 (the CPU rest alone there). The CPU rest alone does most where the frame rate is capped (the main
+thread otherwise spins the idle time away); the GPU rest where the GPU is the limit. With Lossless
+2x locking the game to 30 at the camp (each frame two of the title's 60 Hz vblanks), the GPU has
+idle time and the render thread's wait is long, so the GPU rest gains most there.
+
+**Why a frame-rate cap alone barely cools** (the owner: Frame rate 30 did not help much): the
+spinning waits fill the idle time a cap makes - at 30 without the rest, the main thread 105% of a
+core and the prime core at 3187 MHz (1843 with it).
 
 ## BUG-116
 **The game's volume not fully following Android's**

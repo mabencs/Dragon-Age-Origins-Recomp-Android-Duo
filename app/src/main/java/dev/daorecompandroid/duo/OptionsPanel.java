@@ -613,8 +613,18 @@ final class OptionsPanel {
         select(row);
     }
 
+    /** The owner (2026-11-04): a row of a section (Heat guard) that is closed. */
+    private boolean groupClosed(int row) {
+        int i = row - FIRST_OPTION;
+        if (i < 0 || i >= options.length || options[i].group == null) {
+            return false;
+        }
+        return !"open".equals(Options.read(dir, Options.byFile(options[i].group)));
+    }
+
     private boolean hidden(int row) {
-        return (row == APP_UPDATE_ROW && (!preLaunch || launch.appUpdateName.isEmpty()))
+        return groupClosed(row)
+                || (row == APP_UPDATE_ROW && (!preLaunch || launch.appUpdateName.isEmpty()))
                 || (row == RELEASES_ROW && (!preLaunch || BuildConfig.SOURCE_URL.isEmpty()))
                 || (row == photoRow && preLaunch)
                 || (row == exportRow && (preLaunch || !host.debugMode()));
@@ -653,6 +663,12 @@ final class OptionsPanel {
         if (!option) {
             select(index);
             activate();
+            return;
+        }
+        // A section's header (Heat guard) opens or closes with any tap on it.
+        if (options[index - FIRST_OPTION].section) {
+            select(index);
+            change(1, true);
             return;
         }
         if (index != selected) {
@@ -817,6 +833,11 @@ final class OptionsPanel {
             Options.write(dir, resolution, Options.read(dir, resolution));
         }
         notTaken[optionIndex] = false;
+        // A section's header (Heat guard) opens and closes rows: the panel's alone.
+        if (option.section) {
+            render();
+            return;
+        }
         // Before the game every option is taken as it launches; nothing to apply.
         // The performance tab/overlay and the on-screen controller are the app's own
         // (GameActivity and the deck read their files); nothing for the game to take.
@@ -850,7 +871,12 @@ final class OptionsPanel {
             restart |= nextStart;
             // The owner (2026-11-02): an option the game takes only as it starts is marked
             // with an asterisk, the hints below saying what it means.
-            names[row].setText(option.live ? option.title : option.title + " *");
+            names[row].setText(option.section
+                    ? option.title + ("open".equals(value) ? "  ▾" : "  ▸")
+                    : option.live ? option.title : option.title + " *");
+            // A section's rows indented under it, and shown only while it is open.
+            names[row].setPadding(option.group != null ? dp(18) : 0, 0, 0, 0);
+            rows[row].setVisibility(groupClosed(row) ? View.GONE : View.VISIBLE);
             String label = option.labels[option.indexOf(value)] + (nextStart ? " •" : "");
             values[row].setText(row == selected && !setAside(i) ? "‹  " + label + "  ›" : label);
         }

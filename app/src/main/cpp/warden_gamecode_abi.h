@@ -3,4 +3,4 @@
 // The game code this runtime loads: made with app/src/main/assets/gamecode/'s
 // hooks.h, shim.cpp and recipe.json as they are now.
 #pragma once
-#define WARDEN_GAMECODE_ABI "1961314d8a1bb6ae"
+#define WARDEN_GAMECODE_ABI "74aa2ee2adfcb1e2"

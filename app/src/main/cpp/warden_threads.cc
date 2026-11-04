@@ -44,6 +44,7 @@
 #include "warden_guest.h"
 #include "warden_guest_registers.h"
 #include "warden_net.h"
+#include "warden_thermal.h"
 #include "warden_objects.h"
 #include "warden_suspend.h"
 #include "warden_trace.h"
@@ -379,9 +380,13 @@ PPC_FUNC(__imp__NtSuspendThread) {
 // render thread answers. On the Xenon a zero sleep gave the core to its sibling hardware
 // thread; here sched_yield returns at once when nothing else wants the core, so the loop
 // spun a big core flat out (run 697: Eclipse::Update 99% of a core, 71% of it in
-// sched_yield). A zero-length sleep that follows another within kSpinGap is a spin: from
-// the kSpinStreak-th on it naps kNap instead - the answer seen within about that, the core
-// idle meanwhile. A lone Sleep(0) between pieces of work still only yields.
+// sched_yield). With Heat guard's Rest the CPU in the game's waits (files/heat-cpu-rest),
+// a zero-length sleep that follows another
+// within kSpinGap is a spin: from the kSpinStreak-th on it naps kNap instead, the core idle
+// meanwhile. Only then: the answer is seen up to a nap later, and that costs a little
+// smoothness - 41.8 game frames over 50 ms a Korcari Wilds run against 37.4 (runs 704-717)
+// - so it is the guard's, a trade for heat. A lone Sleep(0) between pieces of work only
+// yields either way.
 namespace {
 constexpr auto kSpinGap = std::chrono::microseconds(200);
 constexpr uint32_t kSpinStreak = 8;
@@ -408,7 +413,7 @@ bool SpinWaits() {
 
 namespace {
 void YieldOrNap() {
-  if (warden::SpinWaits()) {
+  if (warden::SpinWaits() || !warden::thermal::CpuRest()) {
     sched_yield();
     return;
   }
