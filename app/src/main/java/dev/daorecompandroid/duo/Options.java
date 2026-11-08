@@ -40,6 +40,11 @@ final class Options {
         boolean section;
         /** The section's file this option is shown under, or null. */
         String group;
+        /**
+         * PLAN 10.21: a row that does something when chosen (A, or a tap) rather than hold a
+         * value - nothing is written for it.
+         */
+        boolean action;
 
         Option(String file, String title, String defaultValue, boolean live,
                String[] values, String[] labels, String[] details) {
@@ -59,6 +64,11 @@ final class Options {
 
         Option inGroup(String sectionFile) {
             group = sectionFile;
+            return this;
+        }
+
+        Option asAction() {
+            action = true;
             return this;
         }
 
@@ -484,6 +494,31 @@ final class Options {
                             + " A B X Y, bumpers, triggers, Back, Start and a button for this"
                             + " panel. Turning it on sets the Button prompts to Xbox.",
                 }),
+        // PLAN 10.21 (the owner, 2026-11-08): the on-screen controller's size, every control
+        // scaled alike (TouchControls reads the file twice a second while shown).
+        new Option("touch-scale", "On-screen controller size", "100", true,
+                new String[] {"70", "80", "90", "100", "115", "130", "150"},
+                new String[] {"70%", "80%", "90%", "100%", "115%", "130%", "150%"},
+                new String[] {
+                    "The on-screen controls at 70% of their first size: the most of the game"
+                            + " showing.",
+                    "The on-screen controls at 80% of their first size.",
+                    "The on-screen controls at 90% of their first size.",
+                    "The on-screen controls as first drawn.",
+                    "The on-screen controls at 115%: bigger targets for the thumbs.",
+                    "The on-screen controls at 130%.",
+                    "The on-screen controls at 150%: the biggest.",
+                }),
+        // PLAN 10.21 (the owner, 2026-11-08): each on-screen control dragged where the player
+        // wants it (TouchControls.startEditing); Done saves the places (files/touch-layout).
+        new Option("touch-layout-adjust", "Adjust on-screen controls layout", "open", true,
+                new String[] {"open"},
+                new String[] {"Adjust"},
+                new String[] {
+                    "Shows the on-screen controls to drag where you want them; Done, at the"
+                            + " top, saves them and comes back here. Reset puts every control"
+                            + " back where it started.",
+                }).asAction(),
         // PLAN 10.16 (the owner picked it, 2026-11-01): the game's language, as the console
         // would say it (warden_imports_kernel.cc's ExGetXConfigSetting). The disc has the
         // text in English, Spanish and Italian; the voices are English in all three. From
@@ -543,6 +578,54 @@ final class Options {
     };
 
     /** PLAN 10.14: a cheat that is done on demand, not a setting (OptionsPanel). */
+    /**
+     * PLAN 10.21 (the owner, 2026-11-08): the panel's tabs. Launcher (the files, Build, the
+     * mods, Launch - before the game only), Visual, Audio, Performance, Game.
+     */
+    static final int TAB_LAUNCHER = 0;
+    static final int TAB_VISUAL = 1;
+    static final int TAB_AUDIO = 2;
+    static final int TAB_PERFORMANCE = 3;
+    static final int TAB_GAME = 4;
+    static final String[] TAB_NAMES = {"Launcher", "Visual", "Audio", "Performance", "Game"};
+
+    /** The tab an option is on: the picture's, the sound's, the heat's, else the game's. */
+    static int tabOf(Option option) {
+        switch (option.file) {
+            case "headphones":
+            case "volume-boost":
+                return TAB_AUDIO;
+            case "heat":
+            case "thermal-guard":
+            case "heat-cpu-rest":
+            case "heat-gpu-wait":
+            case "perf":
+                return TAB_PERFORMANCE;
+            case "frame-rate":
+            case "upscaling":
+            case "aspect":
+            case "resolution":
+            case "fov":
+            case "fov-conversation":
+            case "fsr3":
+            case "motion-blur":
+            case "dof":
+            case "fsr3-sharpen":
+            case "frame-generation":
+            case "colour":
+            case "hdr":
+            case "hdr-white":
+            case "shadows":
+            case "post-processing":
+            case "vignette":
+            case "shader-math":
+            case "anisotropic":
+                return TAB_VISUAL;
+            default:
+                return TAB_GAME;
+        }
+    }
+
     static boolean isCheatAction(String file) {
         return file.equals("cheat-kill") || file.equals("cheat-gold") || file.equals("cheat-xp");
     }

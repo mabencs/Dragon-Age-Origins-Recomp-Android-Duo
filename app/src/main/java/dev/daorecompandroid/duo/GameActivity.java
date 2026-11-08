@@ -434,6 +434,10 @@ public final class GameActivity extends Activity {
         if (optionsPanel == null) {
             return super.dispatchKeyEvent(event);
         }
+        // PLAN 10.21: placing the on-screen controls, the controller's A, B or Start is Done.
+        if (touchControls != null && touchControls.isEditing()) {
+            return touchControls.onEditKey(event) || super.dispatchKeyEvent(event);
+        }
         if (optionsCombo.swallows(event)) {
             return true;
         }
@@ -477,6 +481,9 @@ public final class GameActivity extends Activity {
 
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
+        if (touchControls != null && touchControls.isEditing()) {
+            return true;  // PLAN 10.21: the sticks do nothing while the controls are placed
+        }
         if (optionsPanel != null && optionsPanel.onMotion(event)) {
             return true;
         }
@@ -701,6 +708,14 @@ public final class GameActivity extends Activity {
             }
             NativeBridge.holdGame(false);
             goFullscreen();
+        }
+
+        @Override
+        public void onAdjustTouchLayout() {
+            // PLAN 10.21: the panel out of the way (the game still held), the controls to
+            // drag; their Done brings the panel back.
+            optionsPanel.hideForEdit();
+            touchControls.startEditing(() -> optionsPanel.showAfterEdit());
         }
 
         @Override

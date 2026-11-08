@@ -88,6 +88,12 @@ final class OptionsPanel {
 
         /** PLAN 9.20: in the game, Photo mode chosen - the panel closes first. */
         void onPhotoMode();
+
+        /**
+         * PLAN 10.21: Adjust on-screen controls layout chosen - the panel hides
+         * ({@link #hideForEdit}) until the layout's Done ({@link #showAfterEdit}).
+         */
+        void onAdjustTouchLayout();
     }
 
     /** What the pre-launch rows show, from the activity. */
@@ -181,6 +187,12 @@ final class OptionsPanel {
     private final TextView[] names;
     private final TextView[] values;
     private final LinearLayout[] rows;
+    /** PLAN 10.21: the tabs' names along the top (Options.TAB_*). */
+    private final TextView[] tabViews = new TextView[Options.TAB_NAMES.length];
+    /** The tab shown: its rows only. */
+    private int tab = Options.TAB_VISUAL;
+    /** PLAN 10.21: hidden while the on-screen controls' layout is adjusted. */
+    private boolean editing;
 
     /** Each option's value as the game started: an option that is not live differs from it until the next start. */
     private final String[] startValues;
@@ -282,6 +294,23 @@ final class OptionsPanel {
         noFocus(resume);
         header.addView(resume);
         card.addView(header);
+        // PLAN 10.21 (the owner, 2026-11-08): the tabs - a tap, or LB and RB.
+        LinearLayout tabBar = new LinearLayout(context);
+        tabBar.setOrientation(LinearLayout.HORIZONTAL);
+        tabBar.setPadding(0, dp(8), 0, 0);
+        noFocus(tabBar);
+        for (int t = 0; t < tabViews.length; t++) {
+            TextView view = text(15, PARCHMENT);
+            view.setText(Options.TAB_NAMES[t]);
+            view.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
+            view.setPadding(dp(12), dp(5), dp(12), dp(5));
+            view.setClickable(true);
+            final int which = t;
+            view.setOnClickListener(v -> setTab(which));
+            tabBar.addView(view);
+            tabViews[t] = view;
+        }
+        card.addView(tabBar);
         card.addView(rule(), ruleParams());
 
         scroll = new ScrollView(context);
@@ -397,6 +426,7 @@ final class OptionsPanel {
         launch = state;
         title.setText("Dragon Age: Origins");
         showLaunchRows(true);
+        tab = Options.TAB_LAUNCHER;
         selected = LAUNCH_ROW;
         open();
         Log.i(TAG, "options: the pre-launch settings open");
@@ -422,10 +452,30 @@ final class OptionsPanel {
         showLaunchRows(false);
         title.setText("Options");
         takeStartValues();
-        selected = FIRST_OPTION;
+        tab = Options.TAB_VISUAL;
+        selected = firstInTab();
         quitArmed = false;
         render();
         Log.i(TAG, "options: the game launches with the settings as they are");
+    }
+
+    /** PLAN 10.21: out of the way while the on-screen controls are placed; still open. */
+    void hideForEdit() {
+        editing = true;
+        heldX = 0;
+        heldY = 0;
+        handler.removeCallbacks(repeat);
+        overlay.setVisibility(View.GONE);
+    }
+
+    /** PLAN 10.21: the layout's Done - the panel back as it was. */
+    void showAfterEdit() {
+        editing = false;
+        if (open) {
+            overlay.setVisibility(View.VISIBLE);
+            overlay.bringToFront();
+            render();
+        }
     }
 
     void close() {
@@ -461,6 +511,9 @@ final class OptionsPanel {
      * @return true if the key was the panel's.
      */
     boolean onKey(KeyEvent event) {
+        if (editing) {
+            return false;  // the layout editor's (GameActivity hands it the keys)
+        }
         long key = ((long) event.getDeviceId() << 32) | (event.getKeyCode() & 0xFFFFFFFFL);
         int action = event.getAction();
         if (action == KeyEvent.ACTION_UP) {
@@ -485,6 +538,16 @@ final class OptionsPanel {
             case KeyEvent.KEYCODE_DPAD_RIGHT:
                 if (first) {
                     change(1, false);
+                }
+                break;
+            case KeyEvent.KEYCODE_BUTTON_L1:
+                if (first) {
+                    switchTab(-1);
+                }
+                break;
+            case KeyEvent.KEYCODE_BUTTON_R1:
+                if (first) {
+                    switchTab(1);
                 }
                 break;
             case KeyEvent.KEYCODE_BUTTON_A:
@@ -541,7 +604,7 @@ final class OptionsPanel {
 
     /** A pad's sticks and hat while open: the left stick and the hat move like the D-pad. */
     boolean onMotion(MotionEvent event) {
-        if (!open || event.getAction() != MotionEvent.ACTION_MOVE
+        if (!open || editing || event.getAction() != MotionEvent.ACTION_MOVE
                 || (event.getSource() & android.view.InputDevice.SOURCE_JOYSTICK)
                         != android.view.InputDevice.SOURCE_JOYSTICK) {
             return false;
@@ -622,8 +685,62 @@ final class OptionsPanel {
         return !"open".equals(Options.read(dir, Options.byFile(options[i].group)));
     }
 
+    /**
+     * PLAN 10.21: the tab a row is on - the launch rows the Launcher's; the options their
+     * own (Options.tabOf); Photo mode and the report the Game's; About and Close the
+     * Launcher's before the game, the Game's in it.
+     */
+    private int tabOfRow(int row) {
+        if (row < FIRST_OPTION) {
+            return Options.TAB_LAUNCHER;
+        }
+        if (row < photoRow) {
+            return Options.tabOf(options[row - FIRST_OPTION]);
+        }
+        if (row == aboutRow || row == quitRow) {
+            return preLaunch ? Options.TAB_LAUNCHER : Options.TAB_GAME;
+        }
+        return Options.TAB_GAME;
+    }
+
+    /** The tabs offered: the Launcher's before the game only. */
+    private int firstTab() {
+        return preLaunch ? Options.TAB_LAUNCHER : Options.TAB_VISUAL;
+    }
+
+    private void switchTab(int delta) {
+        int first = firstTab();
+        int count = tabViews.length - first;
+        setTab(first + Math.floorMod(tab - first + delta, count));
+    }
+
+    private void setTab(int which) {
+        if (which < firstTab() || which >= tabViews.length) {
+            return;
+        }
+        tab = which;
+        quitArmed = false;
+        cheatDone = null;
+        selected = firstInTab();
+        Log.i(TAG, "options: the " + Options.TAB_NAMES[tab] + " tab");
+        render();
+        scroll.post(() -> scroll.scrollTo(0, 0));
+    }
+
+    /** The tab's first row shown (Launch, on the Launcher's). */
+    private int firstInTab() {
+        for (int row = firstRow(); row < rowCount; row++) {
+            if (!hidden(row)) {
+                return row;
+            }
+        }
+        return firstRow();
+    }
+
     private boolean hidden(int row) {
-        return groupClosed(row)
+        return tabOfRow(row) != tab
+                || (row < FIRST_OPTION && !preLaunch)
+                || groupClosed(row)
                 || (row == APP_UPDATE_ROW && (!preLaunch || launch.appUpdateName.isEmpty()))
                 || (row == RELEASES_ROW && (!preLaunch || BuildConfig.SOURCE_URL.isEmpty()))
                 || (row == photoRow && preLaunch)
@@ -660,7 +777,7 @@ final class OptionsPanel {
      */
     private void tapRow(int index, float x) {
         boolean option = index >= FIRST_OPTION && index < photoRow;
-        if (!option) {
+        if (!option || options[index - FIRST_OPTION].action) {
             select(index);
             activate();
             return;
@@ -770,8 +887,17 @@ final class OptionsPanel {
             render();
             return;
         }
-        // PLAN 10.14: a cheat done on demand - the chosen amount, at the next frame of play.
+        // PLAN 10.21: the on-screen controls' layout, adjusted over the game (or the
+        // launcher); the panel back when it is done.
         int actionIndex = selected - FIRST_OPTION;
+        if (actionIndex >= 0 && actionIndex < options.length && options[actionIndex].action) {
+            if (options[actionIndex].file.equals("touch-layout-adjust")) {
+                Log.i(TAG, "options: Adjust on-screen controls layout");
+                host.onAdjustTouchLayout();
+            }
+            return;
+        }
+        // PLAN 10.14: a cheat done on demand - the chosen amount, at the next frame of play.
         if (actionIndex >= 0 && actionIndex < options.length
                 && Options.isCheatAction(options[actionIndex].file)) {
             if (!preLaunch) {
@@ -808,6 +934,9 @@ final class OptionsPanel {
             return;
         }
         Options.Option option = options[optionIndex];
+        if (option.action) {
+            return;  // done by A or a tap (activate), not changed
+        }
         int index = option.indexOf(Options.read(dir, option));
         // PLAN 9.22: past the values not offered (Rendering resolution's other aspect).
         int tries = option.values.length;
@@ -842,6 +971,7 @@ final class OptionsPanel {
         // The performance tab/overlay and the on-screen controller are the app's own
         // (GameActivity and the deck read their files); nothing for the game to take.
         boolean appOwn = option.file.equals("perf") || option.file.equals("touch-controls")
+                || option.file.equals("touch-scale")
                 || Options.isCheatAction(option.file);  // an amount chosen, not yet done
         if (!preLaunch && option.live && !appOwn
                 && !NativeBridge.applyOption(option.file, value)) {
@@ -876,25 +1006,22 @@ final class OptionsPanel {
                     : option.live ? option.title : option.title + " *");
             // A section's rows indented under it, and shown only while it is open.
             names[row].setPadding(option.group != null ? dp(18) : 0, 0, 0, 0);
-            rows[row].setVisibility(groupClosed(row) ? View.GONE : View.VISIBLE);
             String label = option.labels[option.indexOf(value)] + (nextStart ? " •" : "");
-            values[row].setText(row == selected && !setAside(i) ? "‹  " + label + "  ›" : label);
+            values[row].setText(row == selected && !setAside(i) && !option.action
+                    ? "‹  " + label + "  ›" : label);
         }
         names[quitRow].setText(preLaunch ? "Close" : "Quit the game");
         values[quitRow].setText("");
         names[photoRow].setText("Photo mode");
         values[photoRow].setText("");
-        rows[photoRow].setVisibility(preLaunch ? View.GONE : View.VISIBLE);
         names[exportRow].setText("Exit and export save/logs");
         values[exportRow].setText("");
-        rows[exportRow].setVisibility(hidden(exportRow) ? View.GONE : View.VISIBLE);
         names[aboutRow].setText("About and licences");
         values[aboutRow].setText("");
         values[LAUNCH_ROW].setText(launch.ready ? "" : launch.launchValue);
         values[BUILD_ROW].setText(launch.buildValue);
         names[APP_UPDATE_ROW].setText(launch.appUpdateName);
         values[APP_UPDATE_ROW].setText(launch.appUpdateValue);
-        rows[APP_UPDATE_ROW].setVisibility(hidden(APP_UPDATE_ROW) ? View.GONE : View.VISIBLE);
         values[IMAGE_ROW].setText(launch.imageValue);
         values[UPDATE_ROW].setText(launch.updateValue);
         values[LOSSLESS_ROW].setText(launch.losslessValue);
@@ -902,6 +1029,17 @@ final class OptionsPanel {
         values[RELEASES_ROW].setText("");
         values[RESTORE_ROW].setText("");
         values[MODS_ROW].setText("");
+        // PLAN 10.21: the tab's rows only; the tabs along the top, the shown one marked.
+        for (int i = 0; i < rowCount; i++) {
+            rows[i].setVisibility(hidden(i) ? View.GONE : View.VISIBLE);
+        }
+        launchRule.setVisibility(preLaunch && tab == Options.TAB_LAUNCHER
+                ? View.VISIBLE : View.GONE);
+        for (int t = 0; t < tabViews.length; t++) {
+            tabViews[t].setVisibility(t < firstTab() ? View.GONE : View.VISIBLE);
+            tabViews[t].setTextColor(t == tab ? GOLD : GREY);
+            tabViews[t].setBackgroundColor(t == tab ? SELECTED : 0);
+        }
         for (int i = 0; i < rowCount; i++) {
             rows[i].setBackgroundColor(i == selected ? SELECTED : 0);
             boolean aside = (i >= FIRST_OPTION && i < photoRow && setAside(i - FIRST_OPTION))
@@ -913,12 +1051,13 @@ final class OptionsPanel {
         resume.setVisibility(preLaunch ? View.GONE : View.VISIBLE);
         if (preLaunch) {
             status.setText(launch.status);
-            hints.setText("↑↓ choose    ←→ change    " + confirmLabel + " select    Start launch"
+            hints.setText("LB RB tab    ↑↓ choose    ←→ change    " + confirmLabel
+                    + " select    Start launch"
                     + "\nBy touch: tap a row to choose it, then the left or right of its value"
                     + "\n" + RESTART_NOTE);
         } else {
             status.setText("The game is paused");
-            hints.setText("↑↓ choose    ←→ change    " + confirmLabel
+            hints.setText("LB RB tab    ↑↓ choose    ←→ change    " + confirmLabel
                     + " change    " + backLabel + " close"
                     + "\nBy touch: tap a row to choose it, then the left or right of its value"
                     + "\n" + RESTART_NOTE);

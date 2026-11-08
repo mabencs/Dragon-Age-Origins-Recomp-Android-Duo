@@ -7,11 +7,19 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.HapticFeedbackConstants;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Locale;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -27,10 +35,20 @@ import java.util.function.BooleanSupplier;
  * bottom centre, and the options panel's button in the top left corner. Every finger is
  * its own control (multi-touch): a button stays held until its finger lifts; the D-pad
  * follows its finger across its directions.
+ *
+ * <p>PLAN 10.21 (the owner, 2026-11-08): the player's own size and layout. Options ->
+ * On-screen controller size ({@code files/touch-scale}, a percentage) scales every control;
+ * Options -> Adjust on-screen controls layout opens {@link #startEditing}, where each control
+ * is dragged where the player wants it and a small Done saves the places to
+ * {@code files/touch-layout} (a line "id x y" a control, fractions of the screen). A stick
+ * still floats: the area a thumb starts it in moves with its resting place.
  */
 final class TouchControls extends View {
 
+    private static final String TAG = "Warden";
     private static final long CHECK_MS = 500;
+    /** The places, as the player left them (startEditing). */
+    static final String LAYOUT_FILE = "touch-layout";
 
     /** The 360's button bits (warden_input.h). */
     private static final int DPAD_UP = 0x0001;
@@ -54,22 +72,28 @@ final class TouchControls extends View {
 
     /** A round or pill-shaped button: its centre and size as fractions of the height. */
     private static final class Button {
+        final String id;  // in the layout file
         final int bit;
         final String label;
         final int colour;
-        final float cx;  // fraction of the width
-        final float cy;  // fraction of the height
-        final float radius;  // fraction of the height
+        final float defaultCx;
+        final float defaultCy;
+        float cx;  // fraction of the width
+        float cy;  // fraction of the height
+        final float radius;  // fraction of the height, at 100%
         final boolean pill;
         float x;
         float y;
         float r;
 
-        Button(int bit, String label, int colour, float cx, float cy, float radius,
+        Button(String id, int bit, String label, int colour, float cx, float cy, float radius,
                boolean pill) {
+            this.id = id;
             this.bit = bit;
             this.label = label;
             this.colour = colour;
+            this.defaultCx = cx;
+            this.defaultCy = cy;
             this.cx = cx;
             this.cy = cy;
             this.radius = radius;
@@ -87,19 +111,19 @@ final class TouchControls extends View {
     private static final int GOLD = 0xFFC9A227;
     private final Button[] buttons = {
         // Xbox's colours, Xbox's places.
-        new Button(A, "A", 0xFF5DBB4C, 0.885f, 0.66f, 0.068f, false),
-        new Button(B, "B", 0xFFD9443A, 0.945f, 0.54f, 0.068f, false),
-        new Button(X, "X", 0xFF3C7FD9, 0.825f, 0.54f, 0.068f, false),
-        new Button(Y, "Y", 0xFFE8C33A, 0.885f, 0.42f, 0.068f, false),
-        new Button(LEFT_TRIGGER, "LT", GOLD, 0.035f, 0.30f, 0.055f, false),
-        new Button(LEFT_SHOULDER, "LB", GOLD, 0.035f, 0.44f, 0.055f, false),
-        new Button(RIGHT_TRIGGER, "RT", GOLD, 0.965f, 0.18f, 0.055f, false),
-        new Button(RIGHT_SHOULDER, "RB", GOLD, 0.965f, 0.31f, 0.055f, false),
-        new Button(BACK, "Back", GOLD, 0.43f, 0.94f, 0.04f, true),
-        new Button(START, "Start", GOLD, 0.57f, 0.94f, 0.04f, true),
-        new Button(LEFT_THUMB, "L3", GOLD, 0.035f, 0.94f, 0.04f, false),
-        new Button(RIGHT_THUMB, "R3", GOLD, 0.60f, 0.70f, 0.04f, false),
-        new Button(MENU, "≡", GOLD, 0.035f, 0.08f, 0.045f, false),
+        new Button("A", A, "A", 0xFF5DBB4C, 0.885f, 0.66f, 0.068f, false),
+        new Button("B", B, "B", 0xFFD9443A, 0.945f, 0.54f, 0.068f, false),
+        new Button("X", X, "X", 0xFF3C7FD9, 0.825f, 0.54f, 0.068f, false),
+        new Button("Y", Y, "Y", 0xFFE8C33A, 0.885f, 0.42f, 0.068f, false),
+        new Button("LT", LEFT_TRIGGER, "LT", GOLD, 0.035f, 0.30f, 0.055f, false),
+        new Button("LB", LEFT_SHOULDER, "LB", GOLD, 0.035f, 0.44f, 0.055f, false),
+        new Button("RT", RIGHT_TRIGGER, "RT", GOLD, 0.965f, 0.18f, 0.055f, false),
+        new Button("RB", RIGHT_SHOULDER, "RB", GOLD, 0.965f, 0.31f, 0.055f, false),
+        new Button("Back", BACK, "Back", GOLD, 0.43f, 0.94f, 0.04f, true),
+        new Button("Start", START, "Start", GOLD, 0.57f, 0.94f, 0.04f, true),
+        new Button("L3", LEFT_THUMB, "L3", GOLD, 0.035f, 0.94f, 0.04f, false),
+        new Button("R3", RIGHT_THUMB, "R3", GOLD, 0.60f, 0.70f, 0.04f, false),
+        new Button("Menu", MENU, "≡", GOLD, 0.035f, 0.08f, 0.045f, false),
     };
 
     // The D-pad: a cross centred here, its arm's length a fraction of the height.
@@ -112,6 +136,16 @@ final class TouchControls extends View {
     private static final float RIGHT_CX = 0.70f;
     private static final float RIGHT_CY = 0.82f;
     private static final float STICK_REACH = 0.11f;
+
+    // Where the D-pad and the sticks are now (the player's layout, else the defaults).
+    private float dpadCx = DPAD_CX;
+    private float dpadCy = DPAD_CY;
+    private float leftCx = LEFT_CX;
+    private float leftCy = LEFT_CY;
+    private float rightCx = RIGHT_CX;
+    private float rightCy = RIGHT_CY;
+    /** Options -> On-screen controller size, as a factor. */
+    private float scale = 1f;
 
     private final File filesDir;
     private final BooleanSupplier playing;
@@ -139,6 +173,20 @@ final class TouchControls extends View {
     private boolean shown;
     private boolean running;
 
+    // ---- the layout editor (startEditing) ----
+    private static final int DRAG_NONE = -1;
+    private static final int DRAG_DPAD = 100;
+    private static final int DRAG_LEFT = 101;
+    private static final int DRAG_RIGHT = 102;
+    private boolean editing;
+    private Runnable editDone;
+    /** What each finger drags: a button's index, or DRAG_DPAD / DRAG_LEFT / DRAG_RIGHT. */
+    private final int[] dragging = new int[10];
+    private final float[] grabX = new float[10];
+    private final float[] grabY = new float[10];
+    private final RectF doneBox = new RectF();
+    private final RectF resetBox = new RectF();
+
     TouchControls(Context context, File filesDir, BooleanSupplier playing,
                   Runnable openOptions) {
         super(context);
@@ -150,6 +198,9 @@ final class TouchControls extends View {
         ring.setStyle(Paint.Style.STROKE);
         setVisibility(GONE);
         setHapticFeedbackEnabled(true);
+        Arrays.fill(dragging, DRAG_NONE);
+        scale = readScale();
+        loadLayout();
     }
 
     /** Starts checking the option (twice a second, so it is taken at once). */
@@ -163,6 +214,9 @@ final class TouchControls extends View {
     void stop() {
         running = false;
         ui.removeCallbacks(check);
+        if (editing) {
+            finishEditing();
+        }
         show(false);
     }
 
@@ -177,7 +231,10 @@ final class TouchControls extends View {
             if (!running) {
                 return;
             }
-            show(enabled(filesDir) && playing.getAsBoolean());
+            if (!editing) {
+                takeScale();
+                show(enabled(filesDir) && playing.getAsBoolean());
+            }
             ui.postDelayed(this, CHECK_MS);
         }
     };
@@ -193,7 +250,7 @@ final class TouchControls extends View {
     }
 
     private void releaseAll() {
-        java.util.Arrays.fill(owner, NONE);
+        Arrays.fill(owner, NONE);
         held = 0;
         dpad = 0;
         leftX = leftY = rightX = rightY = 0;
@@ -207,17 +264,298 @@ final class TouchControls extends View {
                 (held & LEFT_TRIGGER) != 0 ? 1f : 0f, (held & RIGHT_TRIGGER) != 0 ? 1f : 0f);
     }
 
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        for (Button button : buttons) {
-            button.x = button.cx * w;
-            button.y = button.cy * h;
-            button.r = button.radius * h;
+    // ---- size and places ----
+
+    /** Options -> On-screen controller size: 100 is the controls as first drawn. */
+    private float readScale() {
+        try {
+            return Integer.parseInt(Options.read(filesDir, Options.byFile("touch-scale")))
+                    / 100f;
+        } catch (NumberFormatException e) {
+            return 1f;
         }
     }
 
+    /** The size chosen in the panel, taken while shown (the check, twice a second). */
+    private void takeScale() {
+        float wanted = readScale();
+        if (wanted != scale) {
+            scale = wanted;
+            layout();
+            invalidate();
+        }
+    }
+
+    private void layout() {
+        float w = getWidth();
+        float h = getHeight();
+        for (Button button : buttons) {
+            button.x = button.cx * w;
+            button.y = button.cy * h;
+            button.r = button.radius * h * scale;
+        }
+    }
+
+    private void loadLayout() {
+        File file = new File(filesDir, LAYOUT_FILE);
+        if (!file.exists()) {
+            return;
+        }
+        try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                String[] part = line.trim().split("\\s+");
+                if (part.length != 3) {
+                    continue;
+                }
+                float x = clamp(Float.parseFloat(part[1]));
+                float y = clamp(Float.parseFloat(part[2]));
+                place(part[0], x, y);
+            }
+        } catch (IOException | NumberFormatException e) {
+            Log.w(TAG, "touch controls: the layout unread, the defaults kept", e);
+        }
+    }
+
+    private void place(String id, float x, float y) {
+        switch (id) {
+            case "DPad":
+                dpadCx = x;
+                dpadCy = y;
+                return;
+            case "LeftStick":
+                leftCx = x;
+                leftCy = y;
+                return;
+            case "RightStick":
+                rightCx = x;
+                rightCy = y;
+                return;
+            default:
+                for (Button button : buttons) {
+                    if (button.id.equals(id)) {
+                        button.cx = x;
+                        button.cy = y;
+                    }
+                }
+        }
+    }
+
+    private void saveLayout() {
+        StringBuilder out = new StringBuilder();
+        for (Button button : buttons) {
+            line(out, button.id, button.cx, button.cy);
+        }
+        line(out, "DPad", dpadCx, dpadCy);
+        line(out, "LeftStick", leftCx, leftCy);
+        line(out, "RightStick", rightCx, rightCy);
+        File file = new File(filesDir, LAYOUT_FILE);
+        File part = new File(filesDir, LAYOUT_FILE + ".part");
+        try (FileWriter writer = new FileWriter(part)) {
+            writer.write(out.toString());
+        } catch (IOException e) {
+            Log.e(TAG, "touch controls: cannot write the layout", e);
+            return;
+        }
+        if (!part.renameTo(file)) {
+            Log.e(TAG, "touch controls: cannot put the layout in place");
+            return;
+        }
+        Log.i(TAG, "touch controls: the layout saved");
+    }
+
+    private static void line(StringBuilder out, String id, float x, float y) {
+        out.append(String.format(Locale.ROOT, "%s %.4f %.4f%n", id, x, y));
+    }
+
+    private void resetLayout() {
+        for (Button button : buttons) {
+            button.cx = button.defaultCx;
+            button.cy = button.defaultCy;
+        }
+        dpadCx = DPAD_CX;
+        dpadCy = DPAD_CY;
+        leftCx = LEFT_CX;
+        leftCy = LEFT_CY;
+        rightCx = RIGHT_CX;
+        rightCy = RIGHT_CY;
+        layout();
+        Log.i(TAG, "touch controls: the layout back to the defaults");
+    }
+
+    private static float clamp(float value) {
+        return Math.max(0f, Math.min(1f, value));
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        layout();
+    }
+
+    // ---- the layout editor ----
+
+    /**
+     * Options -> Adjust on-screen controls layout: every control shown where it is, to be
+     * dragged by touch, whether the on-screen controller is on or not; nothing reaches the
+     * game. Done (or the controller's A, B or Start) saves the places and runs
+     * {@code done}; Reset puts the defaults back until then.
+     */
+    void startEditing(Runnable done) {
+        editDone = done;
+        if (shown) {
+            show(false);  // nothing held reaches the game while editing
+        }
+        editing = true;
+        scale = readScale();
+        Arrays.fill(dragging, DRAG_NONE);
+        setVisibility(VISIBLE);
+        bringToFront();
+        layout();
+        invalidate();
+        Log.i(TAG, "touch controls: adjusting the layout");
+    }
+
+    boolean isEditing() {
+        return editing;
+    }
+
+    private void finishEditing() {
+        saveLayout();
+        editing = false;
+        Arrays.fill(dragging, DRAG_NONE);
+        shown = false;
+        setVisibility(GONE);
+        Runnable done = editDone;
+        editDone = null;
+        if (done != null) {
+            done.run();
+        }
+    }
+
+    /**
+     * The controller while editing: A, B, Start, Select or Back is Done; the pad's other
+     * buttons do nothing. The volume keys stay the system's.
+     */
+    boolean onEditKey(KeyEvent event) {
+        if (!editing) {
+            return false;
+        }
+        int code = event.getKeyCode();
+        boolean done = code == KeyEvent.KEYCODE_BUTTON_A || code == KeyEvent.KEYCODE_BUTTON_B
+                || code == KeyEvent.KEYCODE_BUTTON_START || code == KeyEvent.KEYCODE_BUTTON_SELECT
+                || code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE
+                || code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_DPAD_CENTER;
+        if (!done && !KeyEvent.isGamepadButton(code)) {
+            return false;
+        }
+        if (done && event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+            finishEditing();
+        }
+        return true;
+    }
+
+    private void editTouch(MotionEvent event) {
+        int action = event.getActionMasked();
+        int index = event.getActionIndex();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
+                editDown(event.getPointerId(index), event.getX(index), event.getY(index));
+                break;
+            case MotionEvent.ACTION_MOVE:
+                for (int i = 0; i < event.getPointerCount(); i++) {
+                    editMove(event.getPointerId(i), event.getX(i), event.getY(i));
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
+                int id = event.getPointerId(index);
+                if (id >= 0 && id < dragging.length) {
+                    dragging[id] = DRAG_NONE;
+                }
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                Arrays.fill(dragging, DRAG_NONE);
+                break;
+            default:
+                break;
+        }
+        invalidate();
+    }
+
+    private void editDown(int id, float x, float y) {
+        if (id < 0 || id >= dragging.length) {
+            return;
+        }
+        if (doneBox.contains(x, y)) {
+            finishEditing();
+            return;
+        }
+        if (resetBox.contains(x, y)) {
+            resetLayout();
+            return;
+        }
+        float w = getWidth();
+        float h = getHeight();
+        // The buttons first, the last drawn on top.
+        for (int i = buttons.length - 1; i >= 0; i--) {
+            if (buttons[i].hit(x, y)) {
+                grab(id, i, x - buttons[i].x, y - buttons[i].y);
+                return;
+            }
+        }
+        float arm = DPAD_SIZE * h * scale;
+        if (Math.abs(x - dpadCx * w) <= arm && Math.abs(y - dpadCy * h) <= arm) {
+            grab(id, DRAG_DPAD, x - dpadCx * w, y - dpadCy * h);
+            return;
+        }
+        float reach = STICK_REACH * h * scale * 1.15f;
+        if (Math.hypot(x - leftCx * w, y - leftCy * h) <= reach) {
+            grab(id, DRAG_LEFT, x - leftCx * w, y - leftCy * h);
+        } else if (Math.hypot(x - rightCx * w, y - rightCy * h) <= reach) {
+            grab(id, DRAG_RIGHT, x - rightCx * w, y - rightCy * h);
+        }
+    }
+
+    private void grab(int id, int what, float offsetX, float offsetY) {
+        dragging[id] = what;
+        grabX[id] = offsetX;
+        grabY[id] = offsetY;
+        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+    }
+
+    private void editMove(int id, float x, float y) {
+        if (id < 0 || id >= dragging.length || dragging[id] == DRAG_NONE) {
+            return;
+        }
+        float fx = clamp((x - grabX[id]) / getWidth());
+        float fy = clamp((y - grabY[id]) / getHeight());
+        int what = dragging[id];
+        if (what == DRAG_DPAD) {
+            dpadCx = fx;
+            dpadCy = fy;
+        } else if (what == DRAG_LEFT) {
+            leftCx = fx;
+            leftCy = fy;
+        } else if (what == DRAG_RIGHT) {
+            rightCx = fx;
+            rightCy = fy;
+        } else {
+            buttons[what].cx = fx;
+            buttons[what].cy = fy;
+            buttons[what].x = fx * getWidth();
+            buttons[what].y = fy * getHeight();
+        }
+    }
+
+    // ---- play ----
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (editing) {
+            editTouch(event);
+            return true;
+        }
         if (!shown) {
             return false;
         }
@@ -268,25 +606,32 @@ final class TouchControls extends View {
                 return;
             }
         }
-        float dpadX = DPAD_CX * w;
-        float dpadY = DPAD_CY * h;
-        float arm = DPAD_SIZE * h;
+        float dpadX = dpadCx * w;
+        float dpadY = dpadCy * h;
+        float arm = DPAD_SIZE * h * scale;
         if (Math.abs(x - dpadX) <= arm * 1.2f && Math.abs(y - dpadY) <= arm * 1.2f) {
             owner[id] = DPAD;
             dpad = dpadBits(x - dpadX, y - dpadY, arm);
             performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
             return;
         }
-        // The sticks float: the thumb's landing is the stick's centre.
-        if (x < 0.40f * w && y > 0.50f * h && (owner[id] = freeStick(STICK_LEFT)) != NONE) {
+        // The sticks float: the thumb's landing is the stick's centre, in an area that
+        // moves with the stick's resting place (by default the lower left; the lower
+        // middle-right).
+        float lx = leftCx - LEFT_CX;
+        float ly = leftCy - LEFT_CY;
+        if (x >= lx * w && x < (0.40f + lx) * w && y > (0.50f + ly) * h && y <= (1f + ly) * h
+                && (owner[id] = freeStick(STICK_LEFT)) != NONE) {
             originX[id] = x;
             originY[id] = y;
             leftBaseX = x;
             leftBaseY = y;
             return;
         }
-        if (x > 0.52f * w && x < 0.78f * w && y > 0.55f * h
-                && (owner[id] = freeStick(STICK_RIGHT)) != NONE) {
+        float rx = rightCx - RIGHT_CX;
+        float ry = rightCy - RIGHT_CY;
+        if (x > (0.52f + rx) * w && x < (0.78f + rx) * w && y > (0.55f + ry) * h
+                && y <= (1f + ry) * h && (owner[id] = freeStick(STICK_RIGHT)) != NONE) {
             originX[id] = x;
             originY[id] = y;
             rightBaseX = x;
@@ -308,7 +653,7 @@ final class TouchControls extends View {
         if (id < 0 || id >= owner.length) {
             return;
         }
-        float reach = STICK_REACH * getHeight();
+        float reach = STICK_REACH * getHeight() * scale;
         if (owner[id] == STICK_LEFT || owner[id] == STICK_RIGHT) {
             float dx = (x - originX[id]) / reach;
             float dy = (y - originY[id]) / reach;
@@ -325,8 +670,8 @@ final class TouchControls extends View {
                 rightY = -dy;
             }
         } else if (owner[id] == DPAD) {
-            float arm = DPAD_SIZE * getHeight();
-            int bits = dpadBits(x - DPAD_CX * getWidth(), y - DPAD_CY * getHeight(), arm);
+            float arm = DPAD_SIZE * getHeight() * scale;
+            int bits = dpadBits(x - dpadCx * getWidth(), y - dpadCy * getHeight(), arm);
             if (bits != dpad && bits != 0) {
                 performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
             }
@@ -391,14 +736,20 @@ final class TouchControls extends View {
     protected void onDraw(Canvas canvas) {
         float w = getWidth();
         float h = getHeight();
+        if (editing) {
+            canvas.drawColor(0x66000000);  // the controls stand out from what is behind
+        }
         ring.setStrokeWidth(h * 0.004f);
-        drawStick(canvas, leftBaseX >= 0 ? leftBaseX : LEFT_CX * w,
-                leftBaseX >= 0 ? leftBaseY : LEFT_CY * h, leftX, leftY, h);
-        drawStick(canvas, rightBaseX >= 0 ? rightBaseX : RIGHT_CX * w,
-                rightBaseX >= 0 ? rightBaseY : RIGHT_CY * h, rightX, rightY, h);
-        drawDpad(canvas, DPAD_CX * w, DPAD_CY * h, DPAD_SIZE * h);
-        for (Button button : buttons) {
-            boolean down = (held & button.bit) != 0;
+        boolean leftAtRest = editing || leftBaseX < 0;
+        boolean rightAtRest = editing || rightBaseX < 0;
+        drawStick(canvas, leftAtRest ? leftCx * w : leftBaseX,
+                leftAtRest ? leftCy * h : leftBaseY, leftX, leftY, h, dragged(DRAG_LEFT));
+        drawStick(canvas, rightAtRest ? rightCx * w : rightBaseX,
+                rightAtRest ? rightCy * h : rightBaseY, rightX, rightY, h, dragged(DRAG_RIGHT));
+        drawDpad(canvas, dpadCx * w, dpadCy * h, DPAD_SIZE * h * scale, dragged(DRAG_DPAD));
+        for (int i = 0; i < buttons.length; i++) {
+            Button button = buttons[i];
+            boolean down = editing ? dragged(i) : (held & button.bit) != 0;
             fill.setColor(down ? (button.colour & 0x00FFFFFF) | 0xB0000000 : 0x55100C08);
             ring.setColor((button.colour & 0x00FFFFFF) | (down ? 0xFF000000 : 0xB0000000));
             if (button.pill) {
@@ -414,11 +765,54 @@ final class TouchControls extends View {
             text.setTextSize(button.r * (button.label.length() > 2 ? 0.75f : 0.95f));
             canvas.drawText(button.label, button.x, button.y + text.getTextSize() * 0.35f, text);
         }
+        if (editing) {
+            drawEditBar(canvas, w, h);
+        }
     }
 
-    private void drawStick(Canvas canvas, float cx, float cy, float sx, float sy, float h) {
-        float reach = STICK_REACH * h;
-        fill.setColor(0x40100C08);
+    private boolean dragged(int what) {
+        if (!editing) {
+            return false;
+        }
+        for (int d : dragging) {
+            if (d == what) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Small and at the top centre, between the HUD's portraits and its map: Reset, Done. */
+    private void drawEditBar(Canvas canvas, float w, float h) {
+        float pillH = h * 0.055f;
+        float top = h * 0.025f;
+        float doneW = h * 0.17f;
+        float resetW = h * 0.17f;
+        float gap = h * 0.02f;
+        doneBox.set(w / 2f + gap / 2f, top, w / 2f + gap / 2f + doneW, top + pillH);
+        resetBox.set(w / 2f - gap / 2f - resetW, top, w / 2f - gap / 2f, top + pillH);
+        ring.setStrokeWidth(h * 0.003f);
+        fill.setColor(0xC0C9A227);
+        canvas.drawRoundRect(doneBox, pillH / 2f, pillH / 2f, fill);
+        fill.setColor(0x80100C08);
+        ring.setColor(0xB0C9A227);
+        canvas.drawRoundRect(resetBox, pillH / 2f, pillH / 2f, fill);
+        canvas.drawRoundRect(resetBox, pillH / 2f, pillH / 2f, ring);
+        text.setTextSize(pillH * 0.5f);
+        text.setColor(0xFF161210);
+        canvas.drawText("Done", doneBox.centerX(), doneBox.centerY() + pillH * 0.17f, text);
+        text.setColor(0xE0C9A227);
+        canvas.drawText("Reset", resetBox.centerX(), resetBox.centerY() + pillH * 0.17f, text);
+        text.setTextSize(pillH * 0.36f);
+        text.setColor(0xB0D8CFC0);
+        canvas.drawText("Drag the controls where you want them", w / 2f,
+                top + pillH + pillH * 0.55f, text);
+    }
+
+    private void drawStick(Canvas canvas, float cx, float cy, float sx, float sy, float h,
+                           boolean picked) {
+        float reach = STICK_REACH * h * scale;
+        fill.setColor(picked ? 0x80C9A227 : 0x40100C08);
         ring.setColor(0x90C9A227);
         canvas.drawCircle(cx, cy, reach * 1.15f, fill);
         canvas.drawCircle(cx, cy, reach * 1.15f, ring);
@@ -427,14 +821,14 @@ final class TouchControls extends View {
         canvas.drawCircle(cx + sx * reach, cy - sy * reach, reach * 0.45f, fill);
     }
 
-    private void drawDpad(Canvas canvas, float cx, float cy, float arm) {
+    private void drawDpad(Canvas canvas, float cx, float cy, float arm, boolean picked) {
         float half = arm * 0.36f;
         int[] bits = {DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT};
         float[][] offsets = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
         for (int i = 0; i < 4; i++) {
             float ox = cx + offsets[i][0] * arm * 0.62f;
             float oy = cy + offsets[i][1] * arm * 0.62f;
-            boolean down = (dpad & bits[i]) != 0;
+            boolean down = picked || (dpad & bits[i]) != 0;
             box.set(ox - half, oy - half, ox + half, oy + half);
             fill.setColor(down ? 0xB0C9A227 : 0x55100C08);
             ring.setColor(down ? 0xFFC9A227 : 0xB0C9A227);

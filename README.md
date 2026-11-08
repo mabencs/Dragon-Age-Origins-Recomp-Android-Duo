@@ -232,8 +232,9 @@ the main menu.
 - **The options panel.** Press **Select + Start** together during play. Without the
   on-screen controller, a **three-finger tap** on the main screen opens it too; with it, the
   controller's own panel button does. The game pauses while the panel is open.
-- **In the panel.** Up and down choose a row. Left, right, or the confirm button change its
-  value. In the game, B, Back, Select or Start closes the panel; in the launcher, Start
+- **In the panel.** The settings are on tabs - Launcher (before the game only), Visual,
+  Audio, Performance and Game: tap a tab's name, or press LB and RB. Up and down choose a
+  row. Left, right, or the confirm button change its value. In the game, B, Back, Select or Start closes the panel; in the launcher, Start
   launches the game. By touch, tap a row, then the left or right half of its value.
 - **Photo mode.** Press **L3 + R3** together, or use the panel's *Photo mode* row. The world
   pauses, the HUD hides and the camera is free:
@@ -260,7 +261,8 @@ Age**, opens the list of every release and its changes in your browser at any ti
 
 ### The launcher
 
-Opening the app shows the launcher: the rows below, then every setting.
+Opening the app shows the launcher. Its **Launcher** tab has the rows below; the settings
+are on the **Visual**, **Audio**, **Performance** and **Game** tabs.
 
 | Row | What it does |
 |---|---|
@@ -277,7 +279,8 @@ Opening the app shows the launcher: the rows below, then every setting.
 | **About and licences** | The version, what the app is, and every project built into it with its licence. |
 | **Close** | Closes the app. |
 
-In the game, the same panel (Select + Start) has the settings and these rows:
+In the game, the same panel (Select + Start) has the settings' tabs, and on the Game tab
+these rows:
 
 | Row | What it does |
 |---|---|
@@ -329,12 +332,21 @@ setting's description in the panel matches the table.
 | Performance tab/overlay | **Off** · On | *Off:* No performance numbers: the second screen's Perf tab is hidden.<br>*On:* The game's and the screen's frames a second, frame time, 1% low, power, frame generation, upscaling and resolutions - on the second screen's Perf tab when it shows, otherwise at the top of the main screen. |
 | Debugging Mode \* | **Off** · On | *Off:* The game logs only what it always does, to Android's own log.<br>*On:* From the next start the game records everything to a file, and the options in the game offer "Exit and export save/logs": one .zip in Downloads to send with a bug report. Uses more storage. |
 | On-screen controller | **Off** · On | *Off:* Only the controller in your hands.<br>*On:* An Xbox controller over the game, played by touch: sticks, D-pad, A B X Y, bumpers, triggers, Back, Start and a button for this panel. Turning it on sets the Button prompts to Xbox. |
+| On-screen controller size | 70% · 80% · 90% · **100%** · 115% · 130% · 150% | Every on-screen control scaled alike: smaller shows more of the game, bigger is easier to hit. |
+| Adjust on-screen controls layout | **Adjust** | Shows the on-screen controls to drag where you want them. **Done**, small at the top, saves them and comes back to the settings (the controller's A, B or Start does too); **Reset** puts every control back where it started. |
 | Language \* | **English** · Español · Italiano | *English:* The game's text in English.<br>*Español:* El texto del juego en español (las voces, en inglés).<br>*Italiano:* Il testo del gioco in italiano (le voci in inglese). |
 | Cheat: immortal party | **Off** · On | *Off:* The party takes damage as the game decides.<br>*On:* No one in the party can die (the developers' pc_immortal, for each member). Set again after loading a save. |
 | Cheat: pass every skill check | **Off** · On | *Off:* Persuade, intimidate and the like as the game decides.<br>*On:* Every skill check in conversation passes (zz_override_skills). |
 | Cheat: kill all hostiles | **Do it** | Every hostile creature in the area dies (killallhostiles). Press the confirm button or tap the name to do it. |
 | Cheat: add gold | +1 gold · +10 gold · **+100 gold** · +1,000 gold | Choose the amount; the confirm button or a tap on the name gives it. |
 | Cheat: add experience | +1,000 XP · **+5,000 XP** · +20,000 XP · +100,000 XP | Choose the amount; the confirm button or a tap on the name gives it. |
+
+The settings are on these tabs:
+- **Visual:** Frame rate to Texture filtering - the picture, its size and its frame rate.
+- **Audio:** Headphones and Volume boost.
+- **Performance:** Heat guard and the Performance tab/overlay.
+- **Game:** Button prompts, Intro logos, the autosave, Second screen, Debugging Mode, the
+  on-screen controller, Language and the cheats.
 
 Some rows depend on the device or the moment:
 - **HDR** and **HDR paper white** are offered only where the display takes HDR10 (the Thor's

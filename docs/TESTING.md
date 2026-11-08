@@ -477,6 +477,14 @@ the headphones'.
 guard says, `files/guest-trace` the guest trace outside Debugging Mode - for an A/B with one
 build. Busy loops started over adb must be detached (`nohup ... > /dev/null 2>&1 < /dev/null &`)
 or `adb shell` never returns - and killed after.
+**The on-screen controls' size and layout; the panel's tabs** (PLAN 10.21): `files/touch-scale`
+holds the size in percent (70-150; none: 100). `files/touch-layout` holds the places, a line
+"id x y" a control in fractions of the screen (A B X Y LT LB RT RB Back Start L3 R3 Menu DPad
+LeftStick RightStick); remove it for the defaults. The log: `options: Adjust on-screen controls
+layout`, `touch controls: adjusting the layout`, `touch controls: the layout saved` (or `... back
+to the defaults` on Reset), and `options: the <name> tab` as tabs change. The panel's tabs
+change with `adb shell input keyevent KEYCODE_BUTTON_L1` / `KEYCODE_BUTTON_R1` (the panel
+opened as in 11.1, above).
 **4:3** (PLAN 9.22): Options -> Aspect ratio, `files/aspect` holding `4:3` (the log: `video mode:
 4:3 - the title is told 960x720, not widescreen (Aspect ratio)`; FSR 3.1's `the upscaled image,
 1440x1080` on the Thor). The test switch before it: `files/hack-video-mode` holding `960x720 4:3` (or `1280x960 4:3`)

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- **On-screen controller size**, in Settings: from 70% to 150%.
+- **Adjust on-screen controls layout**, in Settings: drag each on-screen control where you want
+  it. **Done**, small at the top, saves the layout and takes you back to the settings; **Reset**
+  puts everything back where it started.
+
+### Changed
+
+- **The launcher and the settings are on tabs:** Launcher (your files, Build, Saves, Mods and
+  Launch), Visual, Audio, Performance and Game. Tap a tab, or press LB and RB.
+
 ## 0.2.0-alpha - "Open Alpha"
 
 <!-- manual-update -->

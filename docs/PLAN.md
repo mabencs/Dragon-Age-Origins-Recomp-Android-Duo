@@ -3406,6 +3406,29 @@ behind the owner's (CLAUDE.md).
       the lists show) its middle renamed. Printable ASCII, 40 characters, an underscore
       typed becomes a space. Checked with the test character: "Save (23) - At the
       ruins" in Load Game, in the same session and after a restart, and loaded.
+- [ ] 10.21 **The on-screen controller's size and layout; the panel in tabs (the owner,
+      2026-11-08) - built (session 45), not yet tried on the Thor.**
+      **Size:** Options -> On-screen controller size (`files/touch-scale`: 70, 80, 90, 100,
+      115, 130 or 150 percent, live) scales every control - the buttons, the D-pad, the
+      sticks' reach. **Layout:** Options -> Adjust on-screen controls layout (an action row,
+      `Option.asAction()`) hides the panel - the game still held - and shows every control,
+      on or off, to be dragged by touch (`TouchControls.startEditing`); a small **Done** at
+      the top centre (or the controller's A, B, Start, Select or Back) saves the places to
+      `files/touch-layout` ("id x y" a control, fractions of the screen: A, B, X, Y, LT, LB,
+      RT, RB, Back, Start, L3, R3, Menu, DPad, LeftStick, RightStick) and brings the panel
+      back; **Reset** beside it puts the first places back until Done. Nothing reaches the
+      game while placing. The sticks still float: the area a thumb starts one in moves with
+      its resting place, so the defaults behave as before. **Tabs:** the panel's rows on five
+      tabs (`Options.tabOf`, `OptionsPanel.tabOfRow`) - **Launcher** (Launch, the update and
+      releases rows, Build, the files, Saves, Mods, About, Close; before the game only),
+      **Visual** (frame rate, upscaling, aspect, resolution, the fields of view, FSR 3.1 and
+      its sharpening, motion blur, depth of field, frame generation, colour, HDR, shadows,
+      post-processing, the vignette, shader math, texture filtering), **Audio** (headphones,
+      volume boost), **Performance** (Heat guard, the performance tab/overlay) and **Game**
+      (button prompts, intro logos, the autosave, the second screen, Debugging Mode, the
+      on-screen controller with its size and layout, language, the cheats; in the game Photo
+      mode, the report, About and Quit). A tap on a tab's name, or LB and RB, changes tab;
+      the game's panel opens on the tab it was left on (Visual at first).
 
 
 ## Phase 11 — Release
