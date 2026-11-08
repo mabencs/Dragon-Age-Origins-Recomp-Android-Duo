@@ -497,11 +497,14 @@ final class Options {
         // PLAN 10.21 (the owner, 2026-11-08): the on-screen controller's size, every control
         // scaled alike (TouchControls reads the file twice a second while shown).
         new Option("touch-scale", "On-screen controller size", "100", true,
-                new String[] {"70", "80", "90", "100", "115", "130", "150"},
-                new String[] {"70%", "80%", "90%", "100%", "115%", "130%", "150%"},
+                new String[] {"50", "60", "70", "80", "90", "100", "115", "130", "150"},
+                new String[] {"50%", "60%", "70%", "80%", "90%", "100%", "115%", "130%",
+                    "150%"},
                 new String[] {
-                    "The on-screen controls at 70% of their first size: the most of the game"
+                    "The on-screen controls at half their first size: the most of the game"
                             + " showing.",
+                    "The on-screen controls at 60% of their first size.",
+                    "The on-screen controls at 70% of their first size.",
                     "The on-screen controls at 80% of their first size.",
                     "The on-screen controls at 90% of their first size.",
                     "The on-screen controls as first drawn.",

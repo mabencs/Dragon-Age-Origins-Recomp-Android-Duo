@@ -1874,12 +1874,14 @@ Newest first. One short entry per session: what changed, what's next.
   Done that saves and goes back to the settings; and the launcher and settings on tabs -
   Launcher, Visual, Audio, Performance, Game.
 - **Built** (`TouchControls.java`, `OptionsPanel.java`, `Options.java`, `GameActivity.java`):
-  `files/touch-scale` (70-150%, live), `files/touch-layout` (the places, Done saves them; Reset
+  `files/touch-scale` (50-150%, live), `files/touch-layout` (the places, Done saves them; Reset
   beside it), the five tabs (a tap on a name, or LB / RB). **Tried on the Thor** once its
   wireless debugging was back: the tabs by RB and by a tap, in the launcher and in the game;
   the editor from both, Done by a tap and by B, Reset, the saved places; 130% and 150% (a
   control near an edge now moves in as it grows, so none is cut off); the moved controls
-  playing. Launch's description says "the settings on the other tabs". DAO Debug left with the
+  playing. Launch's description says "the settings on the other tabs".
+  Then (the owner): sizes down to 50% (50 and 60 added) - not yet built, as a game ran on the
+  PC; build and look at 50% next. DAO Debug left with the
   on-screen controller off and no layout or size file, as before.
 - The build ran while the game check named a running game: the check was in the same command
   as the build, so the build was done before it was read. Run the check on its own first.

@@ -3408,8 +3408,8 @@ behind the owner's (CLAUDE.md).
       ruins" in Load Game, in the same session and after a restart, and loaded.
 - [x] 10.21 **The on-screen controller's size and layout; the panel in tabs (the owner,
       2026-11-08) - done (session 45), tried on the Thor.**
-      **Size:** Options -> On-screen controller size (`files/touch-scale`: 70, 80, 90, 100,
-      115, 130 or 150 percent, live) scales every control - the buttons, the D-pad, the
+      **Size:** Options -> On-screen controller size (`files/touch-scale`: 50, 60, 70, 80, 90,
+      100, 115, 130 or 150 percent, live) scales every control - the buttons, the D-pad, the
       sticks' reach. **Layout:** Options -> Adjust on-screen controls layout (an action row,
       `Option.asAction()`) hides the panel - the game still held - and shows every control,
       on or off, to be dragged by touch (`TouchControls.startEditing`); a small **Done** at

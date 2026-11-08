@@ -4,7 +4,7 @@
 
 ### New
 
-- **On-screen controller size**, in Settings: from 70% to 150%. Controls near an edge move in
+- **On-screen controller size**, in Settings: from 50% to 150%. Controls near an edge move in
   as they grow, so none is cut off.
 - **Adjust on-screen controls layout**, in Settings: drag each on-screen control where you want
   it. **Done**, small at the top, saves the layout and takes you back to the settings; **Reset**

@@ -478,7 +478,7 @@ guard says, `files/guest-trace` the guest trace outside Debugging Mode - for an 
 build. Busy loops started over adb must be detached (`nohup ... > /dev/null 2>&1 < /dev/null &`)
 or `adb shell` never returns - and killed after.
 **The on-screen controls' size and layout; the panel's tabs** (PLAN 10.21): `files/touch-scale`
-holds the size in percent (70-150; none: 100). `files/touch-layout` holds the places, a line
+holds the size in percent (50-150; none: 100). `files/touch-layout` holds the places, a line
 "id x y" a control in fractions of the screen (A B X Y LT LB RT RB Back Start L3 R3 Menu DPad
 LeftStick RightStick); remove it for the defaults. The log: `options: Adjust on-screen controls
 layout`, `touch controls: adjusting the layout`, `touch controls: the layout saved` (or `... back
