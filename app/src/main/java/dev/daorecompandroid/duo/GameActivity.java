@@ -1004,7 +1004,7 @@ public final class GameActivity extends Activity {
         }
         state.ready = extracted && usableUpdate && codeReady;
         if (state.ready) {
-            state.launchDetail = "Starts Dragon Age: Origins with the options below.";
+            state.launchDetail = "Starts Dragon Age: Origins with the settings on the other tabs.";
             state.status = "Ready";
         } else if (codeRunning || codeStarting) {
             state.launchDetail = "Once the game's code is made (Build, below).";

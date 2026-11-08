@@ -3406,8 +3406,8 @@ behind the owner's (CLAUDE.md).
       the lists show) its middle renamed. Printable ASCII, 40 characters, an underscore
       typed becomes a space. Checked with the test character: "Save (23) - At the
       ruins" in Load Game, in the same session and after a restart, and loaded.
-- [ ] 10.21 **The on-screen controller's size and layout; the panel in tabs (the owner,
-      2026-11-08) - built (session 45), not yet tried on the Thor.**
+- [x] 10.21 **The on-screen controller's size and layout; the panel in tabs (the owner,
+      2026-11-08) - done (session 45), tried on the Thor.**
       **Size:** Options -> On-screen controller size (`files/touch-scale`: 70, 80, 90, 100,
       115, 130 or 150 percent, live) scales every control - the buttons, the D-pad, the
       sticks' reach. **Layout:** Options -> Adjust on-screen controls layout (an action row,
@@ -3428,7 +3428,13 @@ behind the owner's (CLAUDE.md).
       (button prompts, intro logos, the autosave, the second screen, Debugging Mode, the
       on-screen controller with its size and layout, language, the cheats; in the game Photo
       mode, the report, About and Quit). A tap on a tab's name, or LB and RB, changes tab;
-      the game's panel opens on the tab it was left on (Visual at first).
+      the game's panel opens on the tab it was left on (Visual at first). A control
+      near an edge is moved in as it grows, so each stays whole on the screen (the places
+      kept as chosen). **On the Thor:** the five tabs by RB and by a tap, before the game
+      and in it (Visual first, no Launcher tab); the editor from the launcher and over the
+      held title screen - A and the D-pad dragged, R3 dragged, Done by a tap and by the
+      controller's B, Reset, the places in `files/touch-layout` and the panel back each
+      time; sizes 130% and 150%; the moved controls playing (Start past "Press START").
 
 
 ## Phase 11 — Release

@@ -10,7 +10,7 @@ starts by re-deriving context that was already paid for.
 | **Version** | **0.2.0-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-04, the tag `v0.2.0-alpha`, a manual update - players install by hand and Build again, as the GPU rest changes the game code's ABI), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **Try PLAN 10.21 on the Thor** (session 45: built, untried - the on-screen controller's size, the layout editor and its Done, the panel's five tabs by touch and by LB / RB, in the launcher and in the game). Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. 0.2.0-alpha is the published version. `RESUMING.md` §5. |
+| **Next action** | **PLAN 10.21 done** (session 45: the on-screen controller's size and layout, the panel's five tabs) - unreleased. Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. 0.2.0-alpha is the published version. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -1875,8 +1875,12 @@ Newest first. One short entry per session: what changed, what's next.
   Launcher, Visual, Audio, Performance, Game.
 - **Built** (`TouchControls.java`, `OptionsPanel.java`, `Options.java`, `GameActivity.java`):
   `files/touch-scale` (70-150%, live), `files/touch-layout` (the places, Done saves them; Reset
-  beside it), the five tabs (a tap on a name, or LB / RB). **Not yet tried on the Thor:** its
-  wireless debugging refused the connection this session.
+  beside it), the five tabs (a tap on a name, or LB / RB). **Tried on the Thor** once its
+  wireless debugging was back: the tabs by RB and by a tap, in the launcher and in the game;
+  the editor from both, Done by a tap and by B, Reset, the saved places; 130% and 150% (a
+  control near an edge now moves in as it grows, so none is cut off); the moved controls
+  playing. Launch's description says "the settings on the other tabs". DAO Debug left with the
+  on-screen controller off and no layout or size file, as before.
 - The build ran while the game check named a running game: the check was in the same command
   as the build, so the build was done before it was read. Run the check on its own first.
 

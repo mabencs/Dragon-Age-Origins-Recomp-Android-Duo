@@ -146,6 +146,14 @@ final class TouchControls extends View {
     private float rightCy = RIGHT_CY;
     /** Options -> On-screen controller size, as a factor. */
     private float scale = 1f;
+    // Where they are drawn and hit, in pixels: the places above, each control kept whole on
+    // the screen (bigger controls near an edge move in rather than off it).
+    private float dpadX;
+    private float dpadY;
+    private float leftRestX;
+    private float leftRestY;
+    private float rightRestX;
+    private float rightRestY;
 
     private final File filesDir;
     private final BooleanSupplier playing;
@@ -290,10 +298,26 @@ final class TouchControls extends View {
         float w = getWidth();
         float h = getHeight();
         for (Button button : buttons) {
-            button.x = button.cx * w;
-            button.y = button.cy * h;
             button.r = button.radius * h * scale;
+            button.x = inside(button.cx * w, button.r * (button.pill ? 1.9f : 1f), w);
+            button.y = inside(button.cy * h, button.r, h);
         }
+        float arm = DPAD_SIZE * h * scale * 0.98f;  // to the arms' outer edges
+        dpadX = inside(dpadCx * w, arm, w);
+        dpadY = inside(dpadCy * h, arm, h);
+        float ring = STICK_REACH * h * scale * 1.15f;
+        leftRestX = inside(leftCx * w, ring, w);
+        leftRestY = inside(leftCy * h, ring, h);
+        rightRestX = inside(rightCx * w, ring, w);
+        rightRestY = inside(rightCy * h, ring, h);
+    }
+
+    /** A centre moved in so that `extent` either side of it stays within 0..size. */
+    private static float inside(float centre, float extent, float size) {
+        if (extent * 2f >= size) {
+            return size / 2f;
+        }
+        return Math.max(extent, Math.min(size - extent, centre));
     }
 
     private void loadLayout() {
@@ -505,15 +529,15 @@ final class TouchControls extends View {
             }
         }
         float arm = DPAD_SIZE * h * scale;
-        if (Math.abs(x - dpadCx * w) <= arm && Math.abs(y - dpadCy * h) <= arm) {
-            grab(id, DRAG_DPAD, x - dpadCx * w, y - dpadCy * h);
+        if (Math.abs(x - dpadX) <= arm && Math.abs(y - dpadY) <= arm) {
+            grab(id, DRAG_DPAD, x - dpadX, y - dpadY);
             return;
         }
         float reach = STICK_REACH * h * scale * 1.15f;
-        if (Math.hypot(x - leftCx * w, y - leftCy * h) <= reach) {
-            grab(id, DRAG_LEFT, x - leftCx * w, y - leftCy * h);
-        } else if (Math.hypot(x - rightCx * w, y - rightCy * h) <= reach) {
-            grab(id, DRAG_RIGHT, x - rightCx * w, y - rightCy * h);
+        if (Math.hypot(x - leftRestX, y - leftRestY) <= reach) {
+            grab(id, DRAG_LEFT, x - leftRestX, y - leftRestY);
+        } else if (Math.hypot(x - rightRestX, y - rightRestY) <= reach) {
+            grab(id, DRAG_RIGHT, x - rightRestX, y - rightRestY);
         }
     }
 
@@ -543,9 +567,8 @@ final class TouchControls extends View {
         } else {
             buttons[what].cx = fx;
             buttons[what].cy = fy;
-            buttons[what].x = fx * getWidth();
-            buttons[what].y = fy * getHeight();
         }
+        layout();
     }
 
     // ---- play ----
@@ -606,8 +629,6 @@ final class TouchControls extends View {
                 return;
             }
         }
-        float dpadX = dpadCx * w;
-        float dpadY = dpadCy * h;
         float arm = DPAD_SIZE * h * scale;
         if (Math.abs(x - dpadX) <= arm * 1.2f && Math.abs(y - dpadY) <= arm * 1.2f) {
             owner[id] = DPAD;
@@ -671,7 +692,7 @@ final class TouchControls extends View {
             }
         } else if (owner[id] == DPAD) {
             float arm = DPAD_SIZE * getHeight() * scale;
-            int bits = dpadBits(x - dpadCx * getWidth(), y - dpadCy * getHeight(), arm);
+            int bits = dpadBits(x - dpadX, y - dpadY, arm);
             if (bits != dpad && bits != 0) {
                 performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
             }
@@ -742,11 +763,11 @@ final class TouchControls extends View {
         ring.setStrokeWidth(h * 0.004f);
         boolean leftAtRest = editing || leftBaseX < 0;
         boolean rightAtRest = editing || rightBaseX < 0;
-        drawStick(canvas, leftAtRest ? leftCx * w : leftBaseX,
-                leftAtRest ? leftCy * h : leftBaseY, leftX, leftY, h, dragged(DRAG_LEFT));
-        drawStick(canvas, rightAtRest ? rightCx * w : rightBaseX,
-                rightAtRest ? rightCy * h : rightBaseY, rightX, rightY, h, dragged(DRAG_RIGHT));
-        drawDpad(canvas, dpadCx * w, dpadCy * h, DPAD_SIZE * h * scale, dragged(DRAG_DPAD));
+        drawStick(canvas, leftAtRest ? leftRestX : leftBaseX,
+                leftAtRest ? leftRestY : leftBaseY, leftX, leftY, h, dragged(DRAG_LEFT));
+        drawStick(canvas, rightAtRest ? rightRestX : rightBaseX,
+                rightAtRest ? rightRestY : rightBaseY, rightX, rightY, h, dragged(DRAG_RIGHT));
+        drawDpad(canvas, dpadX, dpadY, DPAD_SIZE * h * scale, dragged(DRAG_DPAD));
         for (int i = 0; i < buttons.length; i++) {
             Button button = buttons[i];
             boolean down = editing ? dragged(i) : (held & button.bit) != 0;
