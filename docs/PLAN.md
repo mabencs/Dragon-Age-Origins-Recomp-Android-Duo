@@ -3434,7 +3434,7 @@ behind the owner's (CLAUDE.md).
       and in it (Visual first, no Launcher tab); the editor from the launcher and over the
       held title screen - A and the D-pad dragged, R3 dragged, Done by a tap and by the
       controller's B, Reset, the places in `files/touch-layout` and the panel back each
-      time; sizes 130% and 150%; the moved controls playing (Start past "Press START").
+      time; sizes 50%, 130% and 150%; the moved controls playing (Start past "Press START").
 
 
 ## Phase 11 — Release
