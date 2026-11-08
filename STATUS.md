@@ -10,7 +10,7 @@ starts by re-deriving context that was already paid for.
 | **Version** | **0.2.0-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-04, the tag `v0.2.0-alpha`, a manual update - players install by hand and Build again, as the GPU rest changes the game code's ABI), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **PLAN 10.21 done** (session 45: the on-screen controller's size and layout, the panel's five tabs) - unreleased. Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. 0.2.0-alpha is the published version. `RESUMING.md` §5. |
+| **Next action** | **0.2.1-alpha built, awaiting the owner's review** (session 45: PLAN 10.21, the on-screen controller's size and layout, the panel's five tabs; `CHANGELOG.md`, an update from the launcher - Java only, the game code unchanged; the APK in the build clone's `build/releases/0.2.1-alpha`, SHA-256 `1b6f5a9f…`, `tools/release.py` clean). Publish once the owner has reviewed it. Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. 0.2.0-alpha is the published version. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -1884,6 +1884,12 @@ Newest first. One short entry per session: what changed, what's next.
   game running) and tried: 50% in the row and in the editor, every control whole and its label
   readable. DAO Debug's on-screen controller, size and layout are the owner's own now (on, 70%,
   a layout of theirs): the test changed only the size and put 70% back.
+- **0.2.1-alpha built for the owner's review** (the owner allowed the build with a game running):
+  the release APK passed `tools/release.py` (SHA-256 `1b6f5a9f64eaf45ffe4769408493575a66f09e07f4764b0a3b7373a0df8a7ba8`).
+  An ordinary update from the launcher, since only Java changed. But `AppUpdate` reads the
+  manual mark only on the newest release, so a 0.1.x player installs 0.2.1 from the launcher
+  and then meets Build again (0.2.0's new game-code ABI). The changelog's Installing section
+  says so.
 - The build ran while the game check named a running game: the check was in the same command
   as the build, so the build was done before it was read. Run the check on its own first.
 

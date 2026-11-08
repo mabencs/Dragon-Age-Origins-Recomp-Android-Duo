@@ -1,19 +1,38 @@
 # Changelog
 
-## Unreleased
+## 0.2.1-alpha - "Open Alpha"
 
 ### New
 
-- **On-screen controller size**, in Settings: from 50% to 150%. Controls near an edge move in
-  as they grow, so none is cut off.
-- **Adjust on-screen controls layout**, in Settings: drag each on-screen control where you want
-  it. **Done**, small at the top, saves the layout and takes you back to the settings; **Reset**
-  puts everything back where it started.
+- **On-screen controller size**, on the Game tab of Settings: from 50% to 150% (100% as
+  before). Smaller shows more of the game; bigger is easier to hit. Controls near an edge move
+  in as they grow, so none is cut off. It changes at once, in the game too.
+- **Adjust on-screen controls layout**, on the Game tab: drag each on-screen control - the
+  buttons, the D-pad, the sticks - where you want it. **Done**, small at the top, saves the layout
+  and takes you back to the settings (the controller's A, B or Start does too); **Reset** puts
+  everything back where it started. The game waits while you place them, and nothing you touch
+  reaches it.
 
 ### Changed
 
-- **The launcher and the settings are on tabs:** Launcher (your files, Build, Saves, Mods and
-  Launch), Visual, Audio, Performance and Game. Tap a tab, or press LB and RB.
+- **The launcher and the settings are on tabs:**
+  - **Launcher** - Launch, your files, Build, Saves, Mods and About (before the game only).
+  - **Visual** - frame rate, resolution, upscaling, frame generation, post-processing and the
+    rest of the picture.
+  - **Audio** - Headphones and Volume boost.
+  - **Performance** - Heat guard and the Performance tab/overlay.
+  - **Game** - button prompts, intro logos, the autosave, the second screen, the on-screen
+    controller and the cheats.
+
+  Tap a tab's name, or press LB and RB. In the game, the panel opens on the tab you left it on.
+
+### Installing
+
+- **From 0.2.0-alpha:** the launcher installs this update under **Launch Dragon Age**. No Build
+  again is needed. Your saves, game data and settings stay.
+- **From 0.1.9-alpha or earlier:** the launcher installs it too, and then shows **Build again**.
+  Choose it once (about eight minutes). The game's code changed in 0.2.0-alpha, so it has to be
+  made again.
 
 ## 0.2.0-alpha - "Open Alpha"
 
