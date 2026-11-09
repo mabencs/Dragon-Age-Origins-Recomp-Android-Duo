@@ -1,14 +1,36 @@
 # Changelog
 
-## Unreleased
+## 0.2.2-alpha - "Open Alpha"
 
 ### Changed
 
-- **Much less battery with the lid closed or the screen locked.** Put away in play, the game
-  sometimes kept a whole CPU core busy until you came back - about half the times you closed
-  the lid. That core is now held with the rest of the game, and the app stops its background
-  work while put away: put away, the game now uses under 2% of a core, where it used 29% at
-  the title screen and up to 94% in play. The launcher on its own now uses none.
+- **Much better standby battery.** You can close the lid or lock the screen with Dragon Age
+  open and come back to almost the same charge. On the AYN Thor, an hour of closed-lid standby
+  with the game open took the battery from 100% to 99%.
+  - Before, about half the times you closed the lid during play, the game kept a whole CPU core
+    busy until you came back. That core now waits with the rest of the game.
+  - The app also stops its background work while the game is put away: the sound, the second
+    screen and the on-screen controller.
+  - The launcher open on its own now uses no CPU at all.
+- Playing is unchanged: the same frame rate, and the game picks up where you left it.
+
+### Measured: CPU while the screen is locked
+
+On the AYN Thor, as a share of one CPU core:
+
+| With the screen locked | 0.2.1-alpha | 0.2.2-alpha |
+|---|---|---|
+| In play | up to 94% (about half the times) | under 2%, every time |
+| At the title screen | 29% | 1.4% |
+| The launcher, no game started | 7.7% | 0% |
+
+### Installing
+
+- **From 0.2.0-alpha or 0.2.1-alpha:** the launcher installs this update under **Launch Dragon
+  Age**. No Build again is needed. Your saves, game data and settings stay.
+- **From 0.1.9-alpha or earlier:** the launcher installs it too, and then shows **Build again**.
+  Choose it once (about eight minutes). The game's code changed in 0.2.0-alpha, so it has to be
+  made again.
 
 ## 0.2.1-alpha - "Open Alpha"
 
