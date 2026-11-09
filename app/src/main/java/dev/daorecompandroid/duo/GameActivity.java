@@ -370,6 +370,9 @@ public final class GameActivity extends Activity {
         }
         reportMediaVolume();
         goFullscreen();
+        if (touchControls != null) {
+            touchControls.setInFront(true);
+        }
         if (runtimeStarted) {
             NativeBridge.setPaused(false);
         }
@@ -402,6 +405,9 @@ public final class GameActivity extends Activity {
     @Override
     protected void onPause() {
         inFront = false;
+        if (touchControls != null) {
+            touchControls.setInFront(false);
+        }
         if (runtimeStarted) {
             NativeBridge.setPaused(true);
         }

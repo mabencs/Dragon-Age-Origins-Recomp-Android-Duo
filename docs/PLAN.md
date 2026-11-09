@@ -3435,6 +3435,17 @@ behind the owner's (CLAUDE.md).
       held title screen - A and the D-pad dragged, R3 dragged, Done by a tap and by the
       controller's B, Reset, the places in `files/touch-layout` and the panel back each
       time; sizes 50%, 130% and 150%; the moved controls playing (Start past "Press START").
+- [ ] 10.22 **The battery with the lid shut and the game open (the owner, 2026-11-09) - the
+      CPU side done (session 46), the battery itself not yet measured.** What the app does
+      put away, per thread (`tools/put_away_cpu.py`): BUG-119 - the render thread's spin
+      in half the lid-closes in play, now held by signal; the XMA decoder, the deck's pull
+      and the touch check stopped - and BUG-058, Xenia's two spin-waits, now napping while
+      the host is idle. Put away: 1.4-1.7% of a core where it was 29% at the title and 94%
+      in play; the launcher alone 0.0% where it was 7.7%. Nothing of the app's holds the
+      device awake (no wake lock, the sound outputs in standby). **Left:** the battery,
+      with the cable out - the charge counter over half an hour with the lid shut, the game
+      open and not, and the published 0.2.1 beside this - and whether the Thor's own wakes
+      (its home app held an audio wake lock once in session 46) keep it from sleeping.
 
 
 ## Phase 11 — Release

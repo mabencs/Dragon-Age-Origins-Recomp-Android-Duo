@@ -34,6 +34,7 @@
 #include "warden_affinity.h"
 #include "warden_guest_heap.h"
 #include "warden_guest_info.h"
+#include "warden_suspend.h"
 #include "warden_trace.h"
 #include "xenia/base/logging.h"
 #include "xenia/memory.h"
@@ -319,6 +320,7 @@ uint32_t RunGuestThread(const char* name, uint32_t stack_size, uint32_t xapi_thr
     XELOGE("guest thread {}: could not attach", name);
     return 0;
   }
+  RegisterTitleThread();  // BUG-119: a suspension can hold it if it spins
   uint8_t* base = g_memory->virtual_membase();
   PPCContext* ctx = CurrentGuestContext();
 
@@ -395,6 +397,7 @@ void CallEntryPoint(uint32_t entry_point, xe::Memory& memory) {
     XELOGE("could not attach the boot thread to the guest");
     return;
   }
+  RegisterTitleThread();  // BUG-119: a suspension can hold it if it spins
   PPCContext* ctx = CurrentGuestContext();
   if (!ctx) {
     XELOGE("no guest context after attaching");

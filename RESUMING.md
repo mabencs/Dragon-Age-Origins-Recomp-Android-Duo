@@ -246,7 +246,7 @@ What git does not hold, and what makes it:
 | `toolchain/winsysroot`, `toolchain/xwin` | 4: `tools/setup_winsysroot.py --accept-license` | MSVC CRT 14.44 + Windows SDK 10.0.26100, ~85 MB |
 | `build/xenonrecomp/` | 4: DAORecomp's `patch_recompiler.py`, then `tools/patch_xenonrecomp.py` (PLAN 2.4, 12.4), then CMake + Ninja with clang-cl | `XenonRecomp.exe` |
 | `recomp/generated/ppc_tu6/` | 5: `tools/recompile.py tu` | the TU7 build Gradle compiles into `libdaogame.so` (the developer's own, `tools/push_gamecode.py`): 211 files, 265 MB; `--disc-build` adds `ppc` (for `check_xex.py`) |
-| `build/runtime-tree/` | 6: `tools/assemble_runtime.py` | Xenia's Vulkan backend grafted onto DAORecomp, with the **223 recorded edits** |
+| `build/runtime-tree/` | 6: `tools/assemble_runtime.py` | Xenia's Vulkan backend grafted onto DAORecomp, with the **273 recorded edits** |
 | `build/lsfg-vk/` | 6: `tools/prepare_lsfg.py` | lsfg-vk's two folders with seven recorded edits (its externally managed device: a queue index, the 16-bit choice; its command buffer wrapping the game's); the build stops without it |
 | `build/dao-convert/` | 6: `tools/assemble_dao_convert.py` | DAORecomp's PC mod converter: four of its files with 15 recorded edits (PLAN 10.13, 10.19); the build stops without it |
 | `third_party/7zip`, `third_party/libarchive` | 2: 7-Zip's tag 26.05 (its C folder, sparse); libarchive's tag v3.8.11 (its libarchive and contrib/android folders, sparse) | .7z and .rar mod imports (PLAN 10.19; libarchive since 11.3, in UnRAR's place); the build stops without them. An old `third_party/unrar` can be deleted |

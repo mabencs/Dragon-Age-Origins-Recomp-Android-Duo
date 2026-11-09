@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Much less battery with the lid closed or the screen locked.** Put away in play, the game
+  sometimes kept a whole CPU core busy until you came back - about half the times you closed
+  the lid. That core is now held with the rest of the game, and the app stops its background
+  work while put away: put away, the game now uses under 2% of a core, where it used 29% at
+  the title screen and up to 94% in play. The launcher on its own now uses none.
+
 ## 0.2.1-alpha - "Open Alpha"
 
 ### New

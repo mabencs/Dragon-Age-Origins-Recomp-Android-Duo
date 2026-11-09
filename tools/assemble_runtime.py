@@ -106,6 +106,78 @@ SST_ALU = "xenia/gpu/spirv_shader_translator_alu.cc"
 VKD_H = "xenia/ui/vulkan/vulkan_device.h"
 VKD_C = "xenia/ui/vulkan/vulkan_device.cc"
 LOG_H = "xenia/base/logging.h"
+TIMERQ_C = "xenia/base/threading_timer_queue.cc"
+SPIN_STRATEGY_H = "#include \"third_party/disruptorplus/include/disruptorplus/spin_wait_strategy.hpp\"\n"
+
+# BUG-058: the wait strategy of Xenia's timer queue and log writer, put beside
+# disruptorplus's spin_wait_strategy in both files (identical, so one class to the linker).
+WARDEN_IDLE_WAIT = (
+    "\n"
+    "// DAO/Warden (BUG-058): disruptorplus's spin_wait_strategy, napping while the host is\n"
+    "// idle - no title started yet (the launcher), or the title suspended (put away, the\n"
+    "// lid, the lock; warden_host_idle in warden_suspend.cc). Spinning, a wait yields 19\n"
+    "// times and sleeps 1 ms, over and over: a thousand wakes a second for each of the two\n"
+    "// threads that wait with it, the timer queue and the log writer - about a tenth of a\n"
+    "// core each with nothing to do. Idle, it sleeps up to 100 ms at a time instead, never\n"
+    "// past its own timeout, so a timer still fires when it falls due. While the title\n"
+    "// runs, the wait is the spin it was.\n"
+    "#include <atomic>\n"
+    "#include <chrono>\n"
+    "#include <thread>\n"
+    "extern \"C\" int warden_host_idle();\n"
+    "class WardenIdleWaitStrategy {\n"
+    " public:\n"
+    "  disruptorplus::sequence_t wait_until_published(\n"
+    "      disruptorplus::sequence_t sequence, size_t count,\n"
+    "      const std::atomic<disruptorplus::sequence_t>* const sequences[]) {\n"
+    "    return wait_until_published(sequence, count, sequences,\n"
+    "                                std::chrono::steady_clock::time_point::max());\n"
+    "  }\n"
+    "\n"
+    "  template <typename Rep, typename Period>\n"
+    "  disruptorplus::sequence_t wait_until_published(\n"
+    "      disruptorplus::sequence_t sequence, size_t count,\n"
+    "      const std::atomic<disruptorplus::sequence_t>* const sequences[],\n"
+    "      const std::chrono::duration<Rep, Period>& timeout) {\n"
+    "    return wait_until_published(sequence, count, sequences,\n"
+    "                                std::chrono::high_resolution_clock::now() + timeout);\n"
+    "  }\n"
+    "\n"
+    "  template <typename Clock, typename Duration>\n"
+    "  disruptorplus::sequence_t wait_until_published(\n"
+    "      disruptorplus::sequence_t sequence, size_t count,\n"
+    "      const std::atomic<disruptorplus::sequence_t>* const sequences[],\n"
+    "      const std::chrono::time_point<Clock, Duration>& timeout_time) {\n"
+    "    disruptorplus::spin_wait spinner;\n"
+    "    disruptorplus::sequence_t result =\n"
+    "        disruptorplus::minimum_sequence_after(sequence, count, sequences);\n"
+    "    while (disruptorplus::difference(result, sequence) < 0) {\n"
+    "      if (spinner.next_spin_will_yield()) {\n"
+    "        const auto now = Clock::now();\n"
+    "        if (timeout_time < now) {\n"
+    "          return result;  // out of time\n"
+    "        }\n"
+    "        if (warden_host_idle()) {\n"
+    "          const auto left = timeout_time - now;\n"
+    "          constexpr auto kNap = std::chrono::milliseconds(100);\n"
+    "          if (left > kNap) {\n"
+    "            std::this_thread::sleep_for(kNap);\n"
+    "          } else {\n"
+    "            std::this_thread::sleep_for(left);\n"
+    "          }\n"
+    "          result = disruptorplus::minimum_sequence_after(sequence, count, sequences);\n"
+    "          continue;\n"
+    "        }\n"
+    "      }\n"
+    "      spinner.spin_once();\n"
+    "      result = disruptorplus::minimum_sequence_after(sequence, count, sequences);\n"
+    "    }\n"
+    "    return result;\n"
+    "  }\n"
+    "\n"
+    "  // As spin_wait_strategy's: the waiters look again by themselves.\n"
+    "  void signal_all_when_blocking() {}\n"
+    "};\n")
 
 # (file, description, find, replace). Every one must match exactly once.
 EDITS = [
@@ -5732,6 +5804,21 @@ EDITS = [
      "  }\n"
      "\n"
      "  if (copy_dest_info_out) {\n"),
+    (TIMERQ_C, "BUG-058: the timer queue's wait naps while the host is idle - the strategy",
+     SPIN_STRATEGY_H, SPIN_STRATEGY_H + WARDEN_IDLE_WAIT),
+    (TIMERQ_C, "BUG-058: the timer queue's wait naps while the host is idle - used",
+     "using WaitStrat = dp::spin_wait_strategy;\n",
+     "using WaitStrat = WardenIdleWaitStrategy;  // DAO/Warden (BUG-058)\n"),
+    (LOGGING_C, "BUG-058: the log writer's wait naps while the host is idle - the strategy",
+     SPIN_STRATEGY_H, SPIN_STRATEGY_H + WARDEN_IDLE_WAIT),
+    (LOGGING_C, "BUG-058: the log writer's wait naps while the host is idle - used",
+     "  dp::spin_wait_strategy wait_strategy_;\n"
+     "  dp::multi_threaded_claim_strategy<dp::spin_wait_strategy> claim_strategy_;\n"
+     "  dp::sequence_barrier<dp::spin_wait_strategy> consumed_;\n",
+     "  // DAO/Warden (BUG-058): napping while the host is idle.\n"
+     "  WardenIdleWaitStrategy wait_strategy_;\n"
+     "  dp::multi_threaded_claim_strategy<WardenIdleWaitStrategy> claim_strategy_;\n"
+     "  dp::sequence_barrier<WardenIdleWaitStrategy> consumed_;\n"),
 ]
 
 

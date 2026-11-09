@@ -709,6 +709,8 @@ bool Runtime::BootGuest() {
   if (!guest_boot_.entry_found || guest_boot_.called || !memory_) {
     return false;
   }
+  // BUG-058: from here Xenia's timer queue and log writer answer at once again.
+  GuestStarting();
   // The GPU first: Xenia's Vulkan graphics system over the guest memory, with its
   // command processor and vsync worker, which attach to the guest and so need the
   // heap the title's load set up. Its presenter replaces the bring-up one on the

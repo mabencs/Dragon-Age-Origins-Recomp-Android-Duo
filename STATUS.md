@@ -6,11 +6,11 @@ starts by re-deriving context that was already paid for.
 
 | | |
 |---|---|
-| **Last updated** | 2026-11-08 (session 45) |
+| **Last updated** | 2026-11-09 (session 46) |
 | **Version** | **0.2.1-alpha, "Open Alpha"** (`CHANGELOG.md`; published 2026-11-08, the tag `v0.2.1-alpha`, an update from the launcher: the on-screen controller's size and layout, the panel's tabs. Before it 0.2.0-alpha, 2026-11-04, a manual update - players installed by hand and chose Build again, as the GPU rest changes the game code's ABI), after the first public release, 0.1.0-alpha: the source, and an APK that holds none of the game (`gradle.properties`: `warden.version`, `warden.releaseName`; `docs/DECISIONS.md` D14) |
 | **Current phase** | **Phase 12 complete: a published APK, the game's code made on the device from the player's own discs.** Phases 0-4, 7, 8, 10, 11 and 12 complete. Phase 5 reached. Phase 6 reached by script - the hand playthrough to Ostagar is left, the alpha's players its testers. Phase 9 done but for what the owner deferred (9.15, 9.9) and 3.8's Adreno work. §2 has the board. |
 | **Overall state** | The whole game runs on the AYN Thor: the main campaign, Awakening and every DLC from the Ultimate Edition's disc 2, and all 118 areas the game's debug menus reach, loaded and profiled (`docs/AREAS.md`). With it: the companion deck on the second screen, button prompts for three controllers, up to 120 fps, FSR 3.1, two kinds of frame generation, HDR10, PC mods with an in-app converter, saves named on the keyboard with thumbnails, export, import and restore, and Debugging Mode's one-file bug reports. [`README.md`](README.md) is the user's manual. |
-| **Next action** | **0.2.1-alpha published** (session 45: PLAN 10.21, the on-screen controller's size and layout, the panel's five tabs). Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. 0.2.1-alpha is the published version. `RESUMING.md` §5. |
+| **Next action** | **PLAN 10.22, the battery with the lid shut** (session 46: the CPU side done and tried on the Thor, unreleased - BUG-119, the render thread's spin held by signal and the polls stopped; BUG-058's spin-waits napping while idle; put away 1.4-1.7% of a core where it was 29-94%). Left: the battery itself, with the cable out (PLAN 10.22). Then what the alpha's players report (Debugging Mode's reports, `docs/TESTING.md`); the open bugs. 0.2.1-alpha is the published version. `RESUMING.md` §5. |
 | **Blockers** | None |
 
 The authoritative task list is [`docs/PLAN.md`](docs/PLAN.md); each session's detail is
@@ -1866,6 +1866,33 @@ Then continue from **Next action** at the top of this file.
 ## 9. Session log
 
 Newest first. One short entry per session: what changed, what's next.
+
+### 2026-11-09 (session 46) - the battery with the lid shut (PLAN 10.22)
+
+- **The owner's ask:** improve the battery draw with the app open and the lid shut or the
+  device locked. The Thor on USB: its USB controller holds a wakeup source, so it never
+  suspends while plugged in - measured instead is what the app does while awake, per thread
+  from /proc (`tools/put_away_cpu.py`, new), and whether anything of the app's keeps the device
+  awake (nothing: no wake lock, every sound output in standby).
+- **Found and fixed** (BUG-119, BUG-058; DAO Debug, two builds - the owner allowed both with a
+  game running on the PC):
+  - Locked at the title: 28.9% of a core - Xenia's timer queue and log writer spinning 10% each
+    (BUG-058), the XMA decoder waking every 2 ms, the hidden deck pulling and redrawing every
+    100 ms, the touch check. Now 1.4%: the spin-waits nap while the host is idle (four edits in
+    `assemble_runtime.py`, `warden_host_idle`), the decoder waits 100 ms while suspended, the
+    deck and the touch check rest while put away.
+  - Locked in play: the render thread spun a whole core in 4 of 7 lock-ups - `sub_82682BF0`
+    loops, with no call, on a byte the held main thread would set. Now a watcher signals a
+    title thread still running a second into a suspension, and parks it on a futex if the
+    signal finds it in `libdaogame.so`. Six lock-ups: 1.5-1.7% each, the spin held by signal in
+    five; then walked on - the game plays as before. The options panel open: 4.0%.
+  - The launcher alone: the published 0.2.1's 7.7% of a core in the background (the two
+    spin-waits), this build's 0.0%. Playing: unchanged (title 47.8% -> 48.2%).
+- No override added: the game code's ABI stays `74aa2ee2adfcb1e2`, no Build again.
+- **Not yet:** the battery with the cable out (PLAN 10.22).
+- DAO Debug left stopped, as found; on it the touch controls are the owner's (on, 70%, their
+  layout), untouched. Its autosave was rewritten by the lock tests (each put-away writes one),
+  from the latest save it loaded. The published app was only read from (`/proc`).
 
 ### 2026-11-08 (session 45) - the on-screen controller's size and layout; the panel in tabs
 

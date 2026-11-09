@@ -157,6 +157,12 @@ final class Deck {
                 if (presentation != shown) {
                     return;
                 }
+                if (hidden) {
+                    // BUG-119: put away with the game (the lid, the lock, Home), nothing is
+                    // pulled or drawn - only a look, twice a second, for its return.
+                    pull.postDelayed(this, 500);
+                    return;
+                }
                 source.watch(current[0].watches());
                 final Map<String, String> values = DeckSource.parse(source.snapshot());
                 final long[] frames = source.frames();
@@ -201,8 +207,11 @@ final class Deck {
         Log.i(TAG, "deck: Presentation shown on display " + display.getDisplayId());
     }
 
-    /** Whether the deck was put away with the game ({@link #hide}), to come back with it. */
-    private boolean hidden;
+    /**
+     * Whether the deck was put away with the game ({@link #hide}), to come back with it.
+     * Read by the Presentation's pull thread too, which rests meanwhile (BUG-119).
+     */
+    private volatile boolean hidden;
 
     /**
      * The game gone to the background (Home, Recents, another app): the deck goes too, so

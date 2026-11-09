@@ -485,6 +485,14 @@ layout`, `touch controls: adjusting the layout`, `touch controls: the layout sav
 to the defaults` on Reset), and `options: the <name> tab` as tabs change. The panel's tabs
 change with `adb shell input keyevent KEYCODE_BUTTON_L1` / `KEYCODE_BUTTON_R1` (the panel
 opened as in 11.1, above).
+**Put away: what the app costs** (PLAN 10.22, BUG-119): `python tools/put_away_cpu.py threads
+<package> 30 label` gives each thread's share of a core from the device's /proc - take it
+playing, then locked (`adb shell input keyevent KEYCODE_SLEEP`, 15 s to settle). `python
+tools/put_away_cpu.py cycles <package> 6`, started in play, locks and unlocks six times and
+gives the render thread's CPU while locked each time; a spin held shows in the log as
+`suspension #N: [DragonAge::Rend] still running (98% of a core) - held by signal`. Over USB the
+Thor never suspends (the USB controller's wakeup source), so the battery itself wants the
+cable out.
 **4:3** (PLAN 9.22): Options -> Aspect ratio, `files/aspect` holding `4:3` (the log: `video mode:
 4:3 - the title is told 960x720, not widescreen (Aspect ratio)`; FSR 3.1's `the upscaled image,
 1440x1080` on the Thor). The test switch before it: `files/hack-video-mode` holding `960x720 4:3` (or `1280x960 4:3`)

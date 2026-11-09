@@ -215,6 +215,19 @@ final class TouchControls extends View {
     void start() {
         if (!running) {
             running = true;
+            if (inFront) {
+                ui.post(check);
+            }
+        }
+    }
+
+    /** Whether the game is in front: put away (the lid, the lock, Home), no checks (BUG-119). */
+    private boolean inFront = true;
+
+    void setInFront(boolean front) {
+        inFront = front;
+        ui.removeCallbacks(check);
+        if (front && running) {
             ui.post(check);
         }
     }

@@ -80,9 +80,10 @@ from commit messages, `STATUS.md` and the design docs.
 | [BUG-055](#bug-055) | upstream (shader storage) / our runtime | medium | **FIXED** | Xenia's shader and pipeline storage kept nothing between sessions on Android: emptied at every start, never flushed, the driver's cache never saved |
 | [BUG-056](#bug-056) | our app (lifecycle) | high | **FIXED** | Coming back to the app could hang its main thread for good in the wake pipe's read: a frozen picture and "not responding", or a black screen after the power button |
 | [BUG-057](#bug-057) | our app (lifecycle) | high | **FIXED** | The game ran on in the background: put away, only its sound stopped |
-| [BUG-058](#bug-058) | upstream (Xenia) | low | **OPEN** | Xenia's timer queue and log writer spin-wait: about 11% of one core, playing or put away |
+| [BUG-058](#bug-058) | upstream (Xenia) | low | **FIXED** | Xenia's timer queue and log writer spin-wait: about 10% of one core each. Now they nap while the game is held or not yet started (the launcher); in play they spin as before |
 | [BUG-059](#bug-059) | upstream (Xenia) / our runtime | low | **FIXED** | With no Vulkan instance the boot went on, and crashed in the command processor's constructor |
 | [BUG-079](#bug-079) | our runtime | medium | **FIXED** | The guest output captures, a debugging aid, ran in every session: a 4 MB PNG of the screen every minute of play, never removed (about 240 MB an hour in the app's files directory), each with a GPU readback and a PNG encode |
+| [BUG-119](#bug-119) | our runtime and app / the title's render thread | high | **FIXED** | Put away (the lid, the lock), the game kept a core busy: the render thread spun on a flag a held thread sets in half the lid-closes in play (93% of a core); the XMA decoder, the deck and the touch check polled on. Held by signal, the polls stopped: 1.4-1.7% of a core |
 | [BUG-118](#bug-118) | our tools (`push_gamecode.py`) | low | **FIXED** | A pushed game code's manifest was never written: the launcher asked for Build again after every push |
 | [BUG-117](#bug-117) | our runtime / the title's waits | medium | **FIXED** | High temperatures (issue #2): the title's waits spin - the main thread's Sleep(0) hand-off and the render thread's GPU fence wait - and the guest trace costs every function's entry. Options -> Heat guard's rests sleep instead, no frame rate lost: the hottest big core 9.5-25 C cooler (the guest trace only in Debugging Mode) |
 | [BUG-116](#bug-116) | the device's firmware (AYN Thor) / our app | high | **FIXED** | The game's volume did not follow Android's: AYN gives apps on the second screen their own volume, and the deck (an activity there) put the game there. Held volume-up past the top raised it further; with the deck off, the media volume was applied twice. The deck is a window of the game's now |
@@ -2177,7 +2178,7 @@ service (STATUS Q12); PLAN 9.13 investigates an autosave as the game is put away
 
 ## BUG-058
 **Two of Xenia's threads spin-wait: about 11% of one core, playing or put away**
-`threading_timer_queue.cc`, `logging.cc` · upstream (Xenia) · severity low · **OPEN** (found 2026-10-27, session 35)
+`threading_timer_queue.cc`, `logging.cc` · upstream (Xenia) · severity low · **FIXED** session 46 for the game put away and the launcher (found 2026-10-27, session 35)
 
 **What it looked like.** With the game suspended (BUG-057) and all of the title held, the
 process still used 11-12% of one core (`top -H`, runs 321-322): 5.6-5.8% in a thread
@@ -2197,10 +2198,21 @@ with the screen on (another app in front), all the CPU the game still takes. Wit
 screen off Android suspends the device, as this app holds no wake lock, so it should cost
 nothing there (not measured: adb over Wi-Fi keeps the device awake).
 
-**Fix (not applied).** `dp::blocking_wait_strategy` in both, as recorded edits: its timed
-wait already has the argument order upstream had to fix; each publish then takes a mutex
-and notifies. The log writer is on every thread's path, so a mistake would hang the whole
-app: it wants a run of its own.
+**Fix considered, not applied.** `dp::blocking_wait_strategy` in both, as recorded edits: its
+timed wait already has the argument order upstream had to fix; each publish then takes a
+mutex and notifies. The log writer is on every thread's path, so a mistake would hang the
+whole app: it wants a run of its own.
+
+**Fixed for the idle host** (session 46, BUG-119; `tools/assemble_runtime.py`, four edits):
+both wait with `WardenIdleWaitStrategy`, disruptorplus's spin wait except that while
+`warden_host_idle()` says so - no title started yet (the launcher: the timer queue's thread
+starts as the library loads, the log writer with the runtime), or the title suspended (put
+away, the lid, the lock, the options panel) - a wait sleeps up to 100 ms at a time instead of
+yielding and sleeping 1 ms, never past its own timeout, so a timer still fires on time. In
+play the wait is the spin it was. The published 0.2.1's launcher in the background: 7.7% of
+a core, all of it these two; this build's, 0.0%. Locked at the title screen they went from
+10.5% and 10.1% to 0.1% and 0.0%. The guess above that the screen off costs nothing missed
+that the device still wakes by itself, and these ran each time.
 
 ---
 
@@ -2957,6 +2969,66 @@ the manifest at all.
 
 **Fixed:** the manifest is written to a temporary file and pushed like the library, whether or not
 the library had to be (the script prints `manifest: ABI <hash>`).
+
+## BUG-119
+**Put away, the game kept a core busy: the render thread spun in half the lid-closes in play, and the app polled on**
+Our runtime (`warden_suspend.cc`, `warden_xma.cc`) and app (`Deck.java`, `TouchControls.java`);
+the title's render thread · severity high · **FIXED** session 46 (the owner's ask, 2026-11-09)
+
+**What it looks like:** battery drain with the lid closed or the screen locked and the game open.
+Measured on the Thor over USB (`tools/put_away_cpu.py`; over USB the device never suspends - the
+USB controller holds a wakeup source - so these are the costs whenever it is awake: each time it
+wakes by itself with the lid shut, and all the time with the game behind another app):
+
+| DAO Debug, the Thor | Before | After |
+|---|---|---|
+| The launcher, no game started (the published 0.2.1's, in the background) | 7.7% of one core | 0.0% |
+| The title screen, locked | 28.9% | 1.4% |
+| In play, locked (lock-ups the render thread spun in) | 93.5-93.9% (4 of 7) | 1.5-1.7% (the spin held by signal in 5 of 6) |
+| In play, locked (the others) | 1.1-1.3% | 1.5-1.7% |
+| The options panel open in play | - | 4.0% |
+| The title screen, playing (unchanged, as meant) | 47.8% | 48.2% |
+
+The in-play "before" is the session's first build, with the polls below already gone: the
+original code had those on top.
+
+**Causes**, by size:
+- **The render thread's spin (the title's).** `DragonAge::Render` empties its job queue in
+  `sub_82682BF0`, then loops - no call in the loop - on a "batch done" byte the main thread
+  sets. A suspension holds the main thread at its next wait; caught mid-frame, the byte is never
+  set, and the render thread ran a whole core until the game came back (simpleperf: 99.7% of its
+  time in that function). A suspension point never reaches it, as it makes no call.
+- **Xenia's two spin-waits** (BUG-058): about 10% of a core each with nothing to do, more locked
+  than playing.
+- **The XMA decoder** (`warden_xma.cc`; its thread inherits the name `Eclipse::Update`): woke every
+  2 ms to scan its contexts, 2.6%.
+- **The companion deck** (a Presentation): its pull went on every 100 ms while hidden - a snapshot
+  from the game, and the party tab's text rebuilt with regular expressions on the main thread
+  (2.8% main thread, 1.7% `deck-pull`).
+- **The on-screen controller's option check**, twice a second on the main thread.
+
+None of them held a wake lock or kept a sound stream open (`dumpsys power`: none of the app's;
+`dumpsys media.audio_flinger`: every output in standby), so a Thor on battery still suspends -
+they cost while it is awake, and a spinning core makes each waking longer and hotter.
+
+**Fixed:**
+- **Held by signal** (`warden_suspend.cc`): the title's threads register as they start
+  (`RegisterTitleThread`, by kernel thread id). A watcher thread (`warden-hold`), a second into
+  each suspension and every 2 s after, signals (`SIGRTMIN + 6`, by `tgkill`) any of them that used
+  over 60% of a core in half a second. The handler parks the thread on a futex until the resume -
+  only if the signal finds it in the title's translated code (`libdaogame.so`'s executable
+  segments), which takes none of the runtime's locks; elsewhere it returns, and the thread holds
+  at its next suspension point. The log: `suspension #N: [DragonAge::Rend] still running (98% of
+  a core) - held by signal`. Six lock-ups in play, then walking on: the game played on as before.
+- Xenia's spin-waits nap while the host is idle (BUG-058).
+- The XMA decoder waits 100 ms at a time while the guest is suspended (a kick still wakes it).
+- The deck's pull looks twice a second while put away, and pulls and draws nothing.
+- The on-screen controller stops its checks from `onPause` to `onResume`.
+
+The game code's ABI is unchanged (no override was added): no Build again.
+
+**Not measured:** the battery itself with the lid shut. That wants the cable out: the charge
+counter before and after half an hour, with and without the game open.
 
 ## BUG-117
 **High temperatures during play (issue #2)**

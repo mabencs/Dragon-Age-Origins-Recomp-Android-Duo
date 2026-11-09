@@ -31,6 +31,7 @@
 #include "ppc_recomp_shared.h"
 #include "warden_guest.h"
 #include "warden_guest_heap.h"
+#include "warden_suspend.h"
 #include "warden_threads.h"
 #include "warden_xma_real.h"
 #include "xenia/base/logging.h"
@@ -403,8 +404,11 @@ void DecoderMain() {
     if (worked) {
       continue;
     }
+    // BUG-119: every 2 ms while the title runs; with it suspended (put away, the lid), only
+    // a kick or a tenth of a second wakes the decoder - nothing enables a context then.
     std::unique_lock<std::mutex> lock(g_kick_mutex);
-    g_kick.wait_for(lock, std::chrono::milliseconds(2), [] { return g_kicked; });
+    g_kick.wait_for(lock, std::chrono::milliseconds(warden::GuestSuspended() ? 100 : 2),
+                    [] { return g_kicked; });
     g_kicked = false;
   }
 }
